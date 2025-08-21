@@ -47,12 +47,13 @@ export const useDashboardStats = () => {
           // API returned error or malformed data
           throw new Error(response.data?.message || 'Invalid response from server');
         }
-      } catch (error: any) {
-        console.error('Failed to fetch dashboard stats:', error);
+      } catch (err: unknown) {
+        console.error('Failed to fetch dashboard stats:', err);
+        const errMessage = err instanceof Error ? err.message : String(err);
         setStats(prev => ({
           ...prev,
           isLoading: false,
-          error: error.message || 'Failed to load dashboard statistics. Please try again.'
+          error: errMessage || 'Failed to load dashboard statistics. Please try again.'
         }));
       }
     };

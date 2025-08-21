@@ -29,8 +29,9 @@ export const loginUser = createAsyncThunk(
       }
       
       return rejectWithValue(response.message || 'Login failed');
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Login failed');
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : String(err);
+      return rejectWithValue(errMessage || 'Login failed');
     }
   }
 );
@@ -50,8 +51,9 @@ export const registerUser = createAsyncThunk(
       }
       
       return rejectWithValue(response.message || 'Registration failed');
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Registration failed');
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : String(err);
+      return rejectWithValue(errMessage || 'Registration failed');
     }
   }
 );
@@ -64,10 +66,11 @@ export const logoutUser = createAsyncThunk(
       localStorage.removeItem('token');
       localStorage.removeItem('user');
       return null;
-    } catch (error: any) {
+    } catch (err: unknown) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      return rejectWithValue(error.message || 'Logout failed');
+      const errMessage = err instanceof Error ? err.message : String(err);
+      return rejectWithValue(errMessage || 'Logout failed');
     }
   }
 );
@@ -86,8 +89,9 @@ export const getCurrentUser = createAsyncThunk(
       }
       
       return rejectWithValue(response.message || 'Failed to get user');
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to get user');
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : String(err);
+      return rejectWithValue(errMessage || 'Failed to get user');
     }
   }
 );
@@ -110,7 +114,7 @@ const authSlice = createSlice({
           state.token = token;
           state.user = user;
           state.isAuthenticated = true;
-        } catch (error) {
+        } catch {
           localStorage.removeItem('token');
           localStorage.removeItem('user');
         }
@@ -141,7 +145,7 @@ const authSlice = createSlice({
         state.isLoading = true;
         state.error = null;
       })
-      .addCase(registerUser.fulfilled, (state, action) => {
+      .addCase(registerUser.fulfilled, (state) => {
         state.isLoading = false;
         state.error = null;
         // User needs admin approval, so don't set as authenticated

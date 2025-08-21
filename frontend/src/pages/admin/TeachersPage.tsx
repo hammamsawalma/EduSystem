@@ -14,7 +14,6 @@ const TeachersPage: React.FC = () => {
   
   // Loading states for different operations
   const [isAddingTeacher, setIsAddingTeacher] = useState<boolean>(false);
-  const [isEditingTeacher, setIsEditingTeacher] = useState<boolean>(false);
   const [isDeletingTeacher, setIsDeletingTeacher] = useState<boolean>(false);
   const [isApprovingTeacher, setIsApprovingTeacher] = useState<boolean>(false);
   const [isBlockingTeacher, setIsBlockingTeacher] = useState<boolean>(false);
@@ -284,7 +283,6 @@ const TeachersPage: React.FC = () => {
     if (!formData.id) return;
     
     try {
-      setIsEditingTeacher(true);
       setError(null);
       
       // Call API to update teacher
@@ -306,8 +304,6 @@ const TeachersPage: React.FC = () => {
     } catch (err) {
       console.error('Error updating teacher:', err);
       setError('Failed to update teacher. Please try again.');
-    } finally {
-      setIsEditingTeacher(false);
     }
   };
   

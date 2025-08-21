@@ -105,11 +105,12 @@ export const useAdminDashboard = (): AdminDashboardData => {
         } else {
           throw new Error(response.data?.message || 'Invalid response from server');
         }
-      } catch (error: any) {
-        console.error('Failed to fetch dashboard stats:', error);
+      } catch (err: unknown) {
+        console.error('Failed to fetch dashboard stats:', err);
+        const errMessage = err instanceof Error ? err.message : String(err);
         setError(prev => ({
           ...prev,
-          stats: error.message || 'Failed to load dashboard statistics'
+          stats: errMessage || 'Failed to load dashboard statistics'
         }));
       } finally {
         setIsLoading(prev => ({ ...prev, stats: false }));
@@ -137,11 +138,12 @@ export const useAdminDashboard = (): AdminDashboardData => {
           console.error('Invalid activities response:', response.data);
           throw new Error(response.data?.message || 'Invalid response from server');
         }
-      } catch (error: any) {
-        console.error('Failed to fetch activities:', error);
+      } catch (err: unknown) {
+        console.error('Failed to fetch activities:', err);
+        const errMessage = err instanceof Error ? err.message : String(err);
         setError(prev => ({
           ...prev,
-          activities: error.message || 'Failed to load recent activities'
+          activities: errMessage || 'Failed to load recent activities'
         }));
       } finally {
         setIsLoading(prev => ({ ...prev, activities: false }));
@@ -169,11 +171,12 @@ export const useAdminDashboard = (): AdminDashboardData => {
           console.error('Invalid pending actions response:', response.data);
           throw new Error(response.data?.message || 'Invalid response from server');
         }
-      } catch (error: any) {
-        console.error('Failed to fetch pending actions:', error);
+      } catch (err: unknown) {
+        console.error('Failed to fetch pending actions:', err);
+        const errMessage = err instanceof Error ? err.message : String(err);
         setError(prev => ({
           ...prev,
-          pendingActions: error.message || 'Failed to load pending actions'
+          pendingActions: errMessage || 'Failed to load pending actions'
         }));
       } finally {
         setIsLoading(prev => ({ ...prev, pendingActions: false }));

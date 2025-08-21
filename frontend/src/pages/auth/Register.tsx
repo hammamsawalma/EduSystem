@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { registerUser, clearError } from '../../store/slices/authSlice';
 import { BookOpen, Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
@@ -19,7 +19,6 @@ const Register: React.FC = () => {
   const [success, setSuccess] = useState(false);
 
   const dispatch = useAppDispatch();
-  const navigate = useNavigate();
   const { isLoading, error } = useAppSelector((state) => state.auth);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {

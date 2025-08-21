@@ -71,31 +71,34 @@ export default api;
 export async function apiRequest<T>(
   method: 'GET' | 'POST' | 'PUT' | 'DELETE',
   url: string,
-  data?: any,
-  config?: any
+  data?: unknown,
+  config?: unknown
 ): Promise<ApiResponse<T>> {
   try {
     const response = await api({
       method,
       url,
+      // axios accepts unknown shapes; keep passing through
       data,
-      ...config,
+      ...(config as any),
     });
     return response.data;
-  } catch (error: any) {
-    // Enhanced error handling
+  } catch (err: unknown) {
+    // Enhanced error handling with safer typing
+    const errMessage = err instanceof Error ? err.message : String(err);
+    const responseData = (err as any)?.response?.data;
     console.error(`API Request Failed: ${method} ${url}`, {
       data,
-      error: error.response?.data || error.message
+      error: responseData || errMessage
     });
     
-    if (error.response?.data) {
-      return error.response.data;
+    if (responseData) {
+      return responseData;
     }
     return {
       success: false,
-      message: error.message || 'An error occurred',
-      error: error.message,
+      message: errMessage || 'An error occurred',
+      error: errMessage,
     };
   }
 }

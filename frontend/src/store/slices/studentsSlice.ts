@@ -52,8 +52,9 @@ export const fetchStudents = createAsyncThunk(
       }
       
       return rejectWithValue(response.message || 'Failed to fetch students');
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to fetch students');
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : String(err);
+      return rejectWithValue(errMessage || 'Failed to fetch students');
     }
   }
 );
@@ -73,8 +74,9 @@ export const createStudent = createAsyncThunk(
       }
       
       return rejectWithValue(response.message || 'Failed to create student');
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to create student');
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : String(err);
+      return rejectWithValue(errMessage || 'Failed to create student');
     }
   }
 );
@@ -94,8 +96,9 @@ export const updateStudent = createAsyncThunk(
       }
       
       return rejectWithValue(response.message || 'Failed to update student');
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to update student');
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : String(err);
+      return rejectWithValue(errMessage || 'Failed to update student');
     }
   }
 );
@@ -114,8 +117,9 @@ export const deleteStudent = createAsyncThunk(
       }
       
       return rejectWithValue(response.message || 'Failed to delete student');
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to delete student');
+    } catch (err: unknown) {
+      const errMessage = err instanceof Error ? err.message : String(err);
+      return rejectWithValue(errMessage || 'Failed to delete student');
     }
   }
 );
