@@ -3,6 +3,7 @@ import { Users, DollarSign, BookOpen, Clock, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAdminDashboard from '../../hooks/useAdminDashboard';
 import { formatDistanceToNow } from 'date-fns';
+import { useToast } from '../../components/ui/ToastContext';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -12,7 +13,8 @@ const AdminDashboard: React.FC = () => {
     pendingActions,
     isLoading,
     error
-  } = useAdminDashboard();
+  , refetch } = useAdminDashboard();
+  const toast = useToast();
   
   // Format currency for display
   const formatCurrency = (amount: number) => {
@@ -25,10 +27,29 @@ const AdminDashboard: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-        <p className="text-gray-600">Overview of your education system</p>
+      <div className="mb-6 flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+          <p className="text-gray-600">Overview of your education system</p>
+        </div>
+        <div>
+          <button
+            onClick={() => {
+              toast.info('Refreshing...');
+              refetch();
+            }}
+            className="btn btn-sm btn-secondary"
+          >
+            Refresh
+          </button>
+        </div>
       </div>
+
+      {error.stats && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded relative" role="alert">
+          <span className="block sm:inline">{error.stats}</span>
+        </div>
+      )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

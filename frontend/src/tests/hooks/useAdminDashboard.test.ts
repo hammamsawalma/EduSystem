@@ -10,28 +10,38 @@ vi.mock('../../services/api');
 
 const wrapper = ({ children }: { children?: React.ReactNode }) => React.createElement(ToastProvider, null, children);
 
-// Provide a basic jsdom environment for tests that need DOM APIs
+/* Provide a basic jsdom environment for tests that need DOM APIs.
+   Be defensive when assigning globals to avoid errors in environments
+   where some globals may already be defined or be getter-only. */
 let dom: JSDOM;
 beforeAll(() => {
   dom = new JSDOM('<!doctype html><html><body></body></html>');
   // @ts-ignore
-  global.window = dom.window;
+  (global as any).window = dom.window;
   // @ts-ignore
-  global.document = dom.window.document;
-  // @ts-ignore
-  global.navigator = dom.window.navigator;
+  (global as any).document = dom.window.document;
+  // Only set navigator if it's not already present
+  if (typeof (global as any).navigator === 'undefined') {
+    // @ts-ignore
+    (global as any).navigator = dom.window.navigator;
+  }
 });
 
 afterAll(() => {
   if (dom) {
     dom.window.close();
   }
+  // Clean up only what we set
   // @ts-ignore
-  delete global.window;
+  if ((global as any).window) delete (global as any).window;
   // @ts-ignore
-  delete global.document;
+  if ((global as any).document) delete (global as any).document;
+  // Do not delete navigator if it existed before tests; only delete if it matches our dom navigator
   // @ts-ignore
-  delete global.navigator;
+  if ((global as any).navigator && (global as any).navigator.userAgent === dom.window.navigator.userAgent) {
+    // @ts-ignore
+    delete (global as any).navigator;
+  }
 });
 
 describe('useAdminDashboard', () => {
