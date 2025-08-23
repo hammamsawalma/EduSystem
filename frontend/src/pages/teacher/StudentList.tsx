@@ -1,16 +1,139 @@
-import React from 'react';
-import { Plus, Search, Filter, Download } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Plus, Search, Filter, Download, Loader2 } from 'lucide-react';
+import { useDispatch } from 'react-redux';
+import { createStudent, fetchStudents, deleteStudent, updateStudent } from '../../store/slices/studentsSlice';
+import { useAppSelector } from '../../hooks/redux';
+import StudentFormModal from '../../components/features/students/StudentFormModal';
+import StudentDetailsModal from '../../components/features/students/StudentDetailsModal';
+import StudentActionsMenu from '../../components/features/students/StudentActionsMenu';
+import type { CreateStudentData, Student } from '../../types/student';
+import type { AppDispatch } from '../../store';
 
 const StudentList: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+
+  // Get students data from Redux store
+  const { students, isLoading, error } = useAppSelector(state => state.students);
+
+  // Fetch students on component mount
+  useEffect(() => {
+    dispatch(fetchStudents({}));
+  }, [dispatch]);
+
+  // Filter students based on search term
+  const filteredStudents = students.filter(student => 
+    student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.personalInfo.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.academicInfo.grade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student.academicInfo.subjects?.some(subject => 
+      subject.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+  );
+
+  const handleAddStudent = async (studentData: CreateStudentData) => {
+    try {
+      if (selectedStudent) {
+        // Update existing student
+        await dispatch(updateStudent({ 
+          id: selectedStudent.id, 
+          ...studentData 
+        })).unwrap();
+      } else {
+        // Create new student
+        await dispatch(createStudent(studentData)).unwrap();
+      }
+      setIsModalOpen(false);
+      setSelectedStudent(null);
+      // Refresh the student list
+      dispatch(fetchStudents({}));
+      // You might want to show a success message here
+    } catch (error) {
+      // Handle error - you might want to show an error message
+      console.error('Failed to save student:', error);
+    }
+  };
+
+  const handleViewStudent = (student: Student) => {
+    setSelectedStudent(student);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleCloseDetailsModal = () => {
+    setIsDetailsModalOpen(false);
+    setSelectedStudent(null);
+  };
+
+  const handleEditStudent = (student: Student) => {
+    // Close details modal first
+    setIsDetailsModalOpen(false);
+    // Set the student for editing and open the form modal
+    setSelectedStudent(student);
+    setIsModalOpen(true);
+  };
+
+  const handleDeleteStudent = async (student: Student) => {
+    if (window.confirm(`Are you sure you want to delete ${student.fullName}? This action cannot be undone.`)) {
+      try {
+        await dispatch(deleteStudent(student.id)).unwrap();
+        setIsDetailsModalOpen(false);
+        setSelectedStudent(null);
+        // Refresh the student list
+        dispatch(fetchStudents({}));
+        // You might want to show a success message here
+      } catch (error) {
+        // Handle error - you might want to show an error message
+        console.error('Failed to delete student:', error);
+      }
+    }
+  };
+
+  const handleActivateStudent = async (student: Student) => {
+    try {
+      await dispatch(updateStudent({
+        id: student.id,
+        status: 'active'
+      })).unwrap();
+      // Refresh the student list
+      dispatch(fetchStudents({}));
+    } catch (error) {
+      console.error('Failed to activate student:', error);
+    }
+  };
+
+  const handleSuspendStudent = async (student: Student) => {
+    if (window.confirm(`Are you sure you want to suspend ${student.fullName}?`)) {
+      try {
+        await dispatch(updateStudent({
+          id: student.id,
+          status: 'suspended'
+        })).unwrap();
+        // Refresh the student list
+        dispatch(fetchStudents({}));
+      } catch (error) {
+        console.error('Failed to suspend student:', error);
+      }
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Page Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">My Students</h1>
-          <p className="text-gray-600">Manage your student information and progress</p>
+          <p className="text-gray-600">
+            Manage your student information and progress
+            {students.length > 0 && ` • ${students.length} student${students.length === 1 ? '' : 's'} total`}
+          </p>
         </div>
-        <button className="btn btn-primary flex items-center">
+        <button 
+          className="btn btn-primary flex items-center"
+          onClick={() => setIsModalOpen(true)}
+        >
           <Plus className="w-4 h-4 mr-2" />
           Add Student
         </button>
@@ -26,6 +149,8 @@ const StudentList: React.FC = () => {
                 type="text"
                 placeholder="Search students..."
                 className="form-input pl-10"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
           </div>
@@ -55,58 +180,100 @@ const StudentList: React.FC = () => {
               </tr>
             </thead>
             <tbody className="table-body">
-              <tr>
-                <td className="table-cell">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary-600">EJ</span>
+              {isLoading ? (
+                <tr>
+                  <td colSpan={6} className="table-cell text-center py-8">
+                    <div className="flex items-center justify-center">
+                      <Loader2 className="w-6 h-6 animate-spin mr-2" />
+                      Loading students...
                     </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">Emma Johnson</p>
-                      <p className="text-xs text-gray-500">emma.johnson@email.com</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="table-cell">9th Grade</td>
-                <td className="table-cell">Math, Science</td>
-                <td className="table-cell">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800">
-                    Active
-                  </span>
-                </td>
-                <td className="table-cell">$80.00</td>
-                <td className="table-cell">
-                  <button className="btn btn-secondary btn-sm">View</button>
-                </td>
-              </tr>
-              <tr>
-                <td className="table-cell">
-                  <div className="flex items-center">
-                    <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
-                      <span className="text-sm font-medium text-primary-600">MS</span>
-                    </div>
-                    <div className="ml-3">
-                      <p className="text-sm font-medium text-gray-900">Michael Smith</p>
-                      <p className="text-xs text-gray-500">michael.smith@email.com</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="table-cell">10th Grade</td>
-                <td className="table-cell">Physics, Chemistry</td>
-                <td className="table-cell">
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-success-100 text-success-800">
-                    Active
-                  </span>
-                </td>
-                <td className="table-cell">$0.00</td>
-                <td className="table-cell">
-                  <button className="btn btn-secondary btn-sm">View</button>
-                </td>
-              </tr>
+                  </td>
+                </tr>
+              ) : error ? (
+                <tr>
+                  <td colSpan={6} className="table-cell text-center py-8 text-red-600">
+                    Error loading students: {error}
+                  </td>
+                </tr>
+              ) : filteredStudents.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="table-cell text-center py-8 text-gray-500">
+                    {searchTerm ? 'No students found matching your search.' : 'No students found. Add your first student!'}
+                  </td>
+                </tr>
+              ) : (
+                filteredStudents.map((student) => (
+                  <tr key={student.id}>
+                    <td className="table-cell">
+                      <div className="flex items-center">
+                        <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-primary-600">
+                            {student.personalInfo.firstName.charAt(0)}{student.personalInfo.lastName.charAt(0)}
+                          </span>
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-sm font-medium text-gray-900">{student.fullName}</p>
+                          <p className="text-xs text-gray-500">{student.personalInfo.email || 'No email'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="table-cell">{student.academicInfo.grade || 'Not specified'}</td>
+                    <td className="table-cell">
+                      {student.academicInfo.subjects?.join(', ') || 'No subjects'}
+                    </td>
+                    <td className="table-cell">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        student.status === 'active' 
+                          ? 'bg-success-100 text-success-800'
+                          : student.status === 'inactive'
+                          ? 'bg-gray-100 text-gray-800'
+                          : 'bg-warning-100 text-warning-800'
+                      }`}>
+                        {student.status.charAt(0).toUpperCase() + student.status.slice(1)}
+                      </span>
+                    </td>
+                    <td className="table-cell">
+                      ${student.paymentInfo.currentBalance.toFixed(2)}
+                    </td>
+                    <td className="table-cell">
+                      <StudentActionsMenu
+                        studentId={student.id}
+                        studentStatus={student.status}
+                        onView={() => handleViewStudent(student)}
+                        onEdit={() => handleEditStudent(student)}
+                        onDelete={() => handleDeleteStudent(student)}
+                        onActivate={() => handleActivateStudent(student)}
+                        onSuspend={() => handleSuspendStudent(student)}
+                      />
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {/* Add Student Modal */}
+      <StudentFormModal
+        isOpen={isModalOpen}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedStudent(null);
+        }}
+        onSave={handleAddStudent}
+        initialData={selectedStudent || undefined}
+        title={selectedStudent ? "Edit Student" : "Add New Student"}
+      />
+
+      {/* Student Details Modal */}
+      <StudentDetailsModal
+        isOpen={isDetailsModalOpen}
+        onClose={handleCloseDetailsModal}
+        student={selectedStudent}
+        onEdit={handleEditStudent}
+        onDelete={handleDeleteStudent}
+      />
     </div>
   );
 };

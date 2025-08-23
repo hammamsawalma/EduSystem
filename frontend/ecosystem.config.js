@@ -4,7 +4,6 @@ module.exports = {
       name: 'edusystem-frontend-dev',
       script: 'npm',
       args: 'run dev',
-      cwd: '/home/hichoma/Dev/freelance/EduSystem/frontend',
       instances: 1,
       exec_mode: 'fork',
       env: {
@@ -24,7 +23,6 @@ module.exports = {
       name: 'edusystem-frontend-build',
       script: 'npm',
       args: 'run build',
-      cwd: '/home/hichoma/Dev/freelance/EduSystem/frontend',
       instances: 1,
       exec_mode: 'fork',
       autorestart: false,
@@ -34,7 +32,6 @@ module.exports = {
       name: 'edusystem-frontend-preview',
       script: 'npm',
       args: 'run preview',
-      cwd: '/home/hichoma/Dev/freelance/EduSystem/frontend',
       instances: 1,
       exec_mode: 'fork',
       env: {

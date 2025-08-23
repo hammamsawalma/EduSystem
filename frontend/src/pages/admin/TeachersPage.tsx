@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, Calendar, Plus, Search, Filter, Loader } from 'lucide-react';
 import TeacherActionsMenu from '../../components/features/teachers/TeacherActionsMenu';
 import TeacherFormModal from '../../components/features/teachers/TeacherFormModal';
+import TeacherDetailsModal from '../../components/features/teachers/TeacherDetailsModal';
 import ConfirmationModal from '../../components/features/teachers/ConfirmationModal';
 import type { Teacher, TeacherFormData } from '../../types/teacher';
 import teacherService from '../../services/teacherService';
@@ -40,6 +41,7 @@ const TeachersPage: React.FC = () => {
   // State for modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isApproveModalOpen, setIsApproveModalOpen] = useState(false);
   const [isBlockModalOpen, setIsBlockModalOpen] = useState(false);
@@ -604,8 +606,8 @@ const TeachersPage: React.FC = () => {
                         teacherId={teacher.id}
                         teacherStatus={teacher.status}
                         onView={() => {
-                          // Handle view action
-                          console.log('View teacher', teacher.id);
+                          setSelectedTeacher(teacher);
+                          setIsViewModalOpen(true);
                         }}
                         onEdit={() => {
                           setSelectedTeacher(teacher);
@@ -705,6 +707,16 @@ const TeachersPage: React.FC = () => {
         onClose={() => setIsAddModalOpen(false)}
         onSave={handleAddTeacher}
         title="Add New Teacher"
+      />
+      
+      {/* View Teacher Details Modal */}
+      <TeacherDetailsModal
+        isOpen={isViewModalOpen}
+        onClose={() => {
+          setIsViewModalOpen(false);
+          setSelectedTeacher(null);
+        }}
+        teacher={selectedTeacher}
       />
       
       {/* Edit Teacher Modal */}

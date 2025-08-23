@@ -76,6 +76,7 @@ export interface CreateStudentData {
 
 export interface UpdateStudentData extends Partial<CreateStudentData> {
   id: string;
+  status?: 'active' | 'inactive' | 'suspended';
 }
 
 export interface StudentsResponse {
