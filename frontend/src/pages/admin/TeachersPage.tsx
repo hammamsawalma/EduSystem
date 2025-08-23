@@ -5,6 +5,7 @@ import TeacherFormModal from '../../components/features/teachers/TeacherFormModa
 import ConfirmationModal from '../../components/features/teachers/ConfirmationModal';
 import type { Teacher, TeacherFormData } from '../../types/teacher';
 import teacherService from '../../services/teacherService';
+import { useToast } from '../../components/ui/ToastContext';
 
 const TeachersPage: React.FC = () => {
   // State for teachers data
@@ -17,6 +18,7 @@ const TeachersPage: React.FC = () => {
   const [isDeletingTeacher, setIsDeletingTeacher] = useState<boolean>(false);
   const [isApprovingTeacher, setIsApprovingTeacher] = useState<boolean>(false);
   const [isBlockingTeacher, setIsBlockingTeacher] = useState<boolean>(false);
+  const toast = useToast();
   
   // Fetch teachers from API on component mount
   useEffect(() => {
@@ -29,6 +31,7 @@ const TeachersPage: React.FC = () => {
       } catch (err) {
         console.error('Failed to load teachers:', err);
         setError('Failed to load teachers. Please try again.');
+        toast.error('Failed to load teachers. Please try again.');
       } finally {
         setIsLoading(false);
       }
@@ -53,8 +56,9 @@ const TeachersPage: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage] = useState(10);
   
-  // Search and filter on the server (debounced)
+  // Search and filter on the server (debounced) with cancellation support
   useEffect(() => {
+    const controller = new AbortController();
     const timer = setTimeout(() => {
       const fetchTeachers = async () => {
         try {
@@ -63,16 +67,20 @@ const TeachersPage: React.FC = () => {
           
           // If there's a search query or status filter, use search endpoint
           if (searchQuery || statusFilter !== 'All') {
-            data = await teacherService.searchTeachers(searchQuery, statusFilter);
+            data = await teacherService.searchTeachers(searchQuery, statusFilter, controller.signal);
           } else {
             // Otherwise, fetch all teachers
             data = await teacherService.getTeachers();
           }
           
           setTeachers(data);
-        } catch (err) {
+        } catch (err: any) {
+          // If the request was cancelled, do nothing
+          if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') {
+            return;
+          }
           console.error('Failed to search/fetch teachers:', err);
-          // Keep the current teachers data, don't set error
+          toast.error('Failed to load teachers. Please try again.');
         } finally {
           setIsLoading(false);
         }
@@ -81,7 +89,10 @@ const TeachersPage: React.FC = () => {
       fetchTeachers();
     }, 500); // 500ms debounce
     
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [searchQuery, statusFilter]);
   
   // Local filtering as fallback with null safety
@@ -145,81 +156,132 @@ const TeachersPage: React.FC = () => {
   
   // Bulk actions handlers
   const handleBulkApprove = async () => {
+    if (selectedTeachers.length === 0) {
+      toast.info('No teachers selected.');
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
-      
-      // Process each selected teacher
-      for (const teacherId of selectedTeachers) {
-        await teacherService.updateTeacherStatus(teacherId, 'Active');
-      }
-      
+
+      const promises = selectedTeachers.map((teacherId) =>
+        teacherService.updateTeacherStatus(teacherId, 'Active').then(
+          (res) => ({ status: 'fulfilled', value: res }),
+          (err) => ({ status: 'rejected', reason: err })
+        )
+      );
+
+      const results = await Promise.all(promises);
+
+      const successCount = results.filter(r => (r as any).status === 'fulfilled').length;
+      const failCount = results.length - successCount;
+
       // Refresh the teacher list
       const updatedTeachers = await teacherService.getTeachers();
       setTeachers(updatedTeachers);
-      
+
       // Clear selection
       setSelectedTeachers([]);
-      
-      // Show success message
-      console.log('Teachers approved successfully!');
+
+      // Show summary toast
+      if (failCount > 0) {
+        toast.error(`${successCount} approved, ${failCount} failed.`);
+      } else {
+        toast.success('All selected teachers approved successfully!');
+      }
     } catch (err) {
       console.error('Error approving teachers:', err);
       setError('Failed to approve teachers. Please try again.');
+      toast.error('Failed to approve teachers. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
   
   const handleBulkBlock = async () => {
+    if (selectedTeachers.length === 0) {
+      toast.info('No teachers selected.');
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
-      
-      // Process each selected teacher
-      for (const teacherId of selectedTeachers) {
-        await teacherService.updateTeacherStatus(teacherId, 'Blocked');
-      }
-      
+
+      const promises = selectedTeachers.map((teacherId) =>
+        teacherService.updateTeacherStatus(teacherId, 'Blocked').then(
+          (res) => ({ status: 'fulfilled', value: res }),
+          (err) => ({ status: 'rejected', reason: err })
+        )
+      );
+
+      const results = await Promise.all(promises);
+
+      const successCount = results.filter(r => (r as any).status === 'fulfilled').length;
+      const failCount = results.length - successCount;
+
       // Refresh the teacher list
       const updatedTeachers = await teacherService.getTeachers();
       setTeachers(updatedTeachers);
-      
+
       // Clear selection
       setSelectedTeachers([]);
-      
-      // Show success message
-      console.log('Teachers blocked successfully!');
+
+      // Show summary toast
+      if (failCount > 0) {
+        toast.error(`${successCount} blocked, ${failCount} failed.`);
+      } else {
+        toast.success('All selected teachers blocked successfully!');
+      }
     } catch (err) {
       console.error('Error blocking teachers:', err);
       setError('Failed to block teachers. Please try again.');
+      toast.error('Failed to block teachers. Please try again.');
     } finally {
       setIsLoading(false);
     }
   };
   
   const handleBulkDelete = async () => {
+    if (selectedTeachers.length === 0) {
+      toast.info('No teachers selected.');
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
-      
-      // Process each selected teacher
-      for (const teacherId of selectedTeachers) {
-        await teacherService.deleteTeacher(teacherId);
-      }
-      
+
+      const promises = selectedTeachers.map((teacherId) =>
+        teacherService.deleteTeacher(teacherId).then(
+          () => ({ status: 'fulfilled' }),
+          (err) => ({ status: 'rejected', reason: err })
+        )
+      );
+
+      const results = await Promise.all(promises);
+
+      const successCount = results.filter(r => (r as any).status === 'fulfilled').length;
+      const failCount = results.length - successCount;
+
       // Refresh the teacher list
       const updatedTeachers = await teacherService.getTeachers();
       setTeachers(updatedTeachers);
-      
+
       // Clear selection
       setSelectedTeachers([]);
-      
-      // Show success message
-      console.log('Teachers deleted successfully!');
+
+      // Show summary toast
+      if (failCount > 0) {
+        toast.error(`${successCount} deleted, ${failCount} failed.`);
+      } else {
+        toast.success('All selected teachers deleted successfully!');
+      }
     } catch (err) {
       console.error('Error deleting teachers:', err);
       setError('Failed to delete teachers. Please try again.');
+      toast.error('Failed to delete teachers. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -269,10 +331,11 @@ const TeachersPage: React.FC = () => {
       setIsAddModalOpen(false);
       
       // Show success message (in a real app, you would use a toast/notification)
-      console.log('Teacher added successfully!');
+      toast.success('Teacher added successfully!');
     } catch (err) {
       console.error('Error adding teacher:', err);
       setError('Failed to add teacher. Please try again.');
+      toast.error('Failed to add teacher. Please try again.');
     } finally {
       setIsAddingTeacher(false);
     }
@@ -300,10 +363,11 @@ const TeachersPage: React.FC = () => {
       setSelectedTeacher(null);
       
       // Show success message
-      console.log('Teacher updated successfully!');
+      toast.success('Teacher updated successfully!');
     } catch (err) {
       console.error('Error updating teacher:', err);
       setError('Failed to update teacher. Please try again.');
+      toast.error('Failed to update teacher. Please try again.');
     }
   };
   
@@ -327,10 +391,11 @@ const TeachersPage: React.FC = () => {
         setSelectedTeacher(null);
         
         // Show success message
-        console.log('Teacher deleted successfully!');
+        toast.success('Teacher deleted successfully!');
       } catch (err) {
         console.error('Error deleting teacher:', err);
         setError('Failed to delete teacher. Please try again.');
+        toast.error('Failed to delete teacher. Please try again.');
       } finally {
         setIsDeletingTeacher(false);
       }
@@ -359,10 +424,11 @@ const TeachersPage: React.FC = () => {
         setSelectedTeacher(null);
         
         // Show success message
-        console.log('Teacher approved successfully!');
+        toast.success('Teacher approved successfully!');
       } catch (err) {
         console.error('Error approving teacher:', err);
         setError('Failed to approve teacher. Please try again.');
+        toast.error('Failed to approve teacher. Please try again.');
       } finally {
         setIsApprovingTeacher(false);
       }
@@ -391,10 +457,11 @@ const TeachersPage: React.FC = () => {
         setSelectedTeacher(null);
         
         // Show success message
-        console.log('Teacher blocked successfully!');
+        toast.success('Teacher blocked successfully!');
       } catch (err) {
         console.error('Error blocking teacher:', err);
         setError('Failed to block teacher. Please try again.');
+        toast.error('Failed to block teacher. Please try again.');
       } finally {
         setIsBlockingTeacher(false);
       }
@@ -605,7 +672,7 @@ const TeachersPage: React.FC = () => {
                         teacherStatus={teacher.status}
                         onView={() => {
                           // Handle view action
-                          console.log('View teacher', teacher.id);
+                          toast.info(`View teacher ${teacher.id}`);
                         }}
                         onEdit={() => {
                           setSelectedTeacher(teacher);

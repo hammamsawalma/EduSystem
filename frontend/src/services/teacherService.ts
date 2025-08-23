@@ -76,7 +76,7 @@ export const teacherService = {
   },
   
   // Search and filter teachers
-  async searchTeachers(query: string, statusFilter?: string): Promise<Teacher[]> {
+  async searchTeachers(query: string, statusFilter?: string, signal?: AbortSignal): Promise<Teacher[]> {
     try {
       let url = `${BASE_URL}?role=teacher`;
       
@@ -88,9 +88,13 @@ export const teacherService = {
         url += `&status=${encodeURIComponent(statusFilter)}`;
       }
       
-      const response = await api.get(url);
+      const response = await api.get(url, { signal });
       return response.data.data || [];
     } catch (error) {
+      // If request was canceled, rethrow so callers can handle silently
+      if ((error as any)?.code === 'ERR_CANCELED') {
+        throw error;
+      }
       console.error('Error searching teachers:', error);
       throw error;
     }
