@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useToast } from '../components/ui/ToastContext';
 
 interface Activity {
   id: string;
@@ -18,6 +19,7 @@ interface Activity {
 interface PendingActions {
   pendingTeacherApprovals: {
     count: number;
+    totalAmount?: number;
   };
   pendingExpenseApprovals: {
     count: number;
@@ -59,7 +61,8 @@ const initialStats: DashboardStats = {
 
 const initialPendingActions: PendingActions = {
   pendingTeacherApprovals: {
-    count: 0
+    count: 0,
+    totalAmount: 0
   },
   pendingExpenseApprovals: {
     count: 0,
@@ -82,15 +85,18 @@ export const useAdminDashboard = (): AdminDashboardData => {
     pendingActions: null as string | null
   });
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const toast = useToast();
 
   // Fetch dashboard statistics
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchStats = async () => {
       try {
         setIsLoading(prev => ({ ...prev, stats: true }));
         setError(prev => ({ ...prev, stats: null }));
         
-        const response = await api.get('/dashboard/stats');
+        const response = await api.get('/dashboard/stats', { signal: controller.signal });
         
         if (response.data && response.data.success) {
           const { totalTeachers, totalStudents, monthlyRevenue, monthlyHours, lastUpdated } = response.data.data;
@@ -105,86 +111,108 @@ export const useAdminDashboard = (): AdminDashboardData => {
         } else {
           throw new Error(response.data?.message || 'Invalid response from server');
         }
-      } catch (err: unknown) {
+      } catch (err: any) {
+        if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') {
+          // request was cancelled; do nothing
+          return;
+        }
         console.error('Failed to fetch dashboard stats:', err);
         const errMessage = err instanceof Error ? err.message : String(err);
         setError(prev => ({
           ...prev,
           stats: errMessage || 'Failed to load dashboard statistics'
         }));
+        toast.error('Failed to load dashboard statistics');
       } finally {
         setIsLoading(prev => ({ ...prev, stats: false }));
       }
     };
 
     fetchStats();
-  }, [refreshTrigger]);
+
+    return () => {
+      controller.abort();
+    };
+  }, [refreshTrigger, toast]);
 
   // Fetch recent activities
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchActivities = async () => {
       try {
         setIsLoading(prev => ({ ...prev, activities: true }));
         setError(prev => ({ ...prev, activities: null }));
         
-        console.log('Fetching activities...');
-        const response = await api.get('/dashboard/activities');
-        console.log('Activities response:', response);
+        // Request only top 5 activities to reduce payload (backend should support this)
+        const response = await api.get('/dashboard/activities?limit=5', { signal: controller.signal });
         
         if (response.data && response.data.success) {
-          console.log('Setting activities:', response.data.data);
           setActivities(response.data.data || []);
         } else {
-          console.error('Invalid activities response:', response.data);
           throw new Error(response.data?.message || 'Invalid response from server');
         }
-      } catch (err: unknown) {
+      } catch (err: any) {
+        if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') {
+          return;
+        }
         console.error('Failed to fetch activities:', err);
         const errMessage = err instanceof Error ? err.message : String(err);
         setError(prev => ({
           ...prev,
           activities: errMessage || 'Failed to load recent activities'
         }));
+        toast.error('Failed to load recent activities');
       } finally {
         setIsLoading(prev => ({ ...prev, activities: false }));
       }
     };
 
     fetchActivities();
-  }, [refreshTrigger]);
+
+    return () => {
+      controller.abort();
+    };
+  }, [refreshTrigger, toast]);
 
   // Fetch pending actions
   useEffect(() => {
+    const controller = new AbortController();
+
     const fetchPendingActions = async () => {
       try {
         setIsLoading(prev => ({ ...prev, pendingActions: true }));
         setError(prev => ({ ...prev, pendingActions: null }));
         
-        console.log('Fetching pending actions...');
-        const response = await api.get('/dashboard/pending-actions');
-        console.log('Pending actions response:', response);
+        const response = await api.get('/dashboard/pending-actions', { signal: controller.signal });
         
         if (response.data && response.data.success) {
-          console.log('Setting pending actions:', response.data.data);
           setPendingActions(response.data.data || initialPendingActions);
         } else {
-          console.error('Invalid pending actions response:', response.data);
           throw new Error(response.data?.message || 'Invalid response from server');
         }
-      } catch (err: unknown) {
+      } catch (err: any) {
+        if (err?.code === 'ERR_CANCELED' || err?.name === 'CanceledError') {
+          return;
+        }
         console.error('Failed to fetch pending actions:', err);
         const errMessage = err instanceof Error ? err.message : String(err);
         setError(prev => ({
           ...prev,
           pendingActions: errMessage || 'Failed to load pending actions'
         }));
+        toast.error('Failed to load pending actions');
       } finally {
         setIsLoading(prev => ({ ...prev, pendingActions: false }));
       }
     };
 
     fetchPendingActions();
-  }, [refreshTrigger]);
+
+    return () => {
+      controller.abort();
+    };
+  }, [refreshTrigger, toast]);
 
   // Function to refetch all data
   const refetch = () => {
