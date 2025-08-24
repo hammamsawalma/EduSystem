@@ -99,7 +99,8 @@ const TeachersPage: React.FC = () => {
       (teacher.profile.firstName?.toLowerCase() || '').includes(searchLower) ||
       (teacher.profile.lastName?.toLowerCase() || '').includes(searchLower) ||
       (teacher.email?.toLowerCase() || '').includes(searchLower) ||
-      (teacher.phone?.toLowerCase() || '').includes(searchLower);
+      (teacher.profile.phone?.toLowerCase() || '').includes(searchLower) ||
+      (teacher.subject?.toLowerCase() || '').includes(searchLower);
     
     const matchesStatus = statusFilter === 'All' || teacher.status === statusFilter;
     
@@ -237,7 +238,7 @@ const TeachersPage: React.FC = () => {
         teacher.profile.firstName,
         teacher.profile.lastName,
         teacher.email,
-        teacher.phone,
+        teacher.profile.phone,
         teacher.subject,
         teacher.status,
         teacher.joinDate ? new Date(teacher.joinDate).toLocaleDateString() : 'N/A'
@@ -582,7 +583,7 @@ const TeachersPage: React.FC = () => {
                       </div>
                       <div className="text-sm text-gray-500 flex items-center mt-1">
                         <Phone className="h-4 w-4 mr-1 text-gray-500" />
-                        {teacher.phone}
+                        {teacher.profile.phone}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

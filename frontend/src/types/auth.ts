@@ -4,6 +4,7 @@ export interface User {
   role: 'admin' | 'teacher';
   firstName: string;
   lastName: string;
+  subject?: string;
   settings: {
     notifications: {
       email: boolean;
@@ -33,6 +34,7 @@ export interface RegisterData {
   lastName: string;
   phone?: string;
   address?: string;
+  subject: string;
 }
 
 export interface AuthState {

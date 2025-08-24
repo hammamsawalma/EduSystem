@@ -30,7 +30,11 @@ export const teacherService = {
   async createTeacher(teacherData: TeacherFormData): Promise<Teacher> {
     try {
       const payload = {
-        ...teacherData,
+        firstName: teacherData.profile.firstName,
+        lastName: teacherData.profile.lastName,
+        email: teacherData.email,
+        phone: teacherData.profile.phone,
+        subject: teacherData.subject,
         role: 'teacher',
         status: 'Pending' // New teachers are pending by default (using uppercase for consistency)
       };
@@ -46,7 +50,17 @@ export const teacherService = {
   // Update an existing teacher
   async updateTeacher(id: string, teacherData: TeacherFormData): Promise<Teacher> {
     try {
-      const response = await api.put(`${BASE_URL}/${id}`, teacherData);
+      const payload = {
+        firstName: teacherData.profile.firstName,
+        lastName: teacherData.profile.lastName,
+        email: teacherData.email,
+        phone: teacherData.profile.phone,
+        subject: teacherData.subject,
+        status: teacherData.status,
+        role: 'teacher'
+      };
+      
+      const response = await api.put(`${BASE_URL}/${id}`, payload);
       return response.data.data;
     } catch (error) {
       console.error(`Error updating teacher with ID ${id}:`, error);

@@ -27,10 +27,11 @@ exports.getUsers = async (req, res) => {
     // Search functionality
     if (search) {
       query.$or = [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
+        { 'profile.firstName': { $regex: search, $options: 'i' } },
+        { 'profile.lastName': { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
-        { phone: { $regex: search, $options: 'i' } }
+        { 'profile.phone': { $regex: search, $options: 'i' } },
+        { subject: { $regex: search, $options: 'i' } }
       ];
     }
     
@@ -145,15 +146,10 @@ exports.createUser = async (req, res) => {
         firstName,
         lastName,
         phone
-      }
+      },
+      // Add subject for teachers
+      ...(role === 'teacher' && subject && { subject })
     });
-    
-    // Add subject for teachers
-    if (role === 'teacher' && subject) {
-      user.teacherProfile = {
-        subject
-      };
-    }
     
     // Hash password
     const salt = await bcrypt.genSalt(10);
@@ -173,6 +169,7 @@ exports.createUser = async (req, res) => {
       firstName: userResponse.profile.firstName,
       lastName: userResponse.profile.lastName,
       phone: userResponse.profile.phone,
+      subject: userResponse.subject,
       status: backendStatus === 'approved' ? 'Active' : 
               backendStatus === 'suspended' ? 'Blocked' : 'Pending'
     };
@@ -243,6 +240,11 @@ exports.updateUser = async (req, res) => {
     if (email) userFields.email = email;
     if (role) userFields.role = role;
     
+    // Handle subject for teachers
+    if (role === 'teacher' && subject) {
+      userFields.subject = subject;
+    }
+    
     // Map frontend status to backend status
     if (status) {
       if (status === 'Active' || status === 'active') {
@@ -262,14 +264,6 @@ exports.updateUser = async (req, res) => {
       userFields.password = await bcrypt.hash(password, salt);
     }
     
-    // Update teacher profile if applicable
-    if (role === 'teacher' && subject) {
-      userFields.teacherProfile = {
-        ...user.teacherProfile,
-        subject
-      };
-    }
-    
     // Update user
     user = await User.findByIdAndUpdate(
       req.params.id,
@@ -284,6 +278,7 @@ exports.updateUser = async (req, res) => {
       firstName: user.profile.firstName,
       lastName: user.profile.lastName,
       phone: user.profile.phone,
+      subject: user.subject,
       status: user.status === 'approved' ? 'Active' : 
               user.status === 'suspended' ? 'Blocked' : 'Pending'
     };

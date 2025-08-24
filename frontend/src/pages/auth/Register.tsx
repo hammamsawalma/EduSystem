@@ -12,6 +12,7 @@ const Register: React.FC = () => {
     firstName: '',
     lastName: '',
     phone: '',
+    subject: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -54,6 +55,7 @@ const Register: React.FC = () => {
         firstName: formData.firstName,
         lastName: formData.lastName,
         phone: formData.phone,
+        subject: formData.subject,
       })).unwrap();
       setSuccess(true);
     } catch (error) {
@@ -188,6 +190,23 @@ const Register: React.FC = () => {
                 onChange={handleChange}
                 className="form-input"
                 placeholder="Enter your phone number"
+              />
+            </div>
+
+            {/* Subject field */}
+            <div>
+              <label htmlFor="subject" className="form-label">
+                Subject
+              </label>
+              <input
+                id="subject"
+                name="subject"
+                type="text"
+                required
+                value={formData.subject}
+                onChange={handleChange}
+                className="form-input"
+                placeholder="What subject do you teach?"
               />
             </div>
 

@@ -3,9 +3,9 @@ export interface Teacher {
   profile: {
     firstName: string;
     lastName: string;
+    phone: string;
   }
   email: string;
-  phone: string;
   subject: string;
   joinDate: string;
   status: string;

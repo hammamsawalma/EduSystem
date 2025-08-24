@@ -20,6 +20,13 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'teacher'],
     required: [true, 'Role is required']
   },
+  subject: {
+    type: String,
+    trim: true,
+    required: function() {
+      return this.role === 'teacher';
+    }
+  },
   profile: {
     firstName: {
       type: String,
@@ -106,6 +113,7 @@ const userSchema = new mongoose.Schema({
 // Index for performance
 userSchema.index({ email: 1 });
 userSchema.index({ role: 1, status: 1 });
+userSchema.index({ subject: 1 });
 
 // Virtual for full name
 userSchema.virtual('fullName').get(function() {

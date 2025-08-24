@@ -11,9 +11,8 @@ interface TeacherFormModalProps {
 }
 
 const defaultTeacher: TeacherFormData = {
-  profile: { firstName: '', lastName: '' },
+  profile: { firstName: '', lastName: '', phone: '' },
   email: '',
-  phone: '',
   subject: '',
   status: 'Pending',
 };
@@ -39,10 +38,22 @@ const TeacherFormModal: React.FC<TeacherFormModalProps> = ({
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setTeacher((prev) => ({
-      ...prev,
-      [name]: value,
-    }));
+    
+    // Handle nested profile fields
+    if (name === 'firstName' || name === 'lastName' || name === 'phone') {
+      setTeacher((prev) => ({
+        ...prev,
+        profile: {
+          ...prev.profile,
+          [name]: value,
+        },
+      }));
+    } else {
+      setTeacher((prev) => ({
+        ...prev,
+        [name]: value,
+      }));
+    }
 
     // Clear validation error when field is edited
     if (errors[name]) {
@@ -70,7 +81,7 @@ const TeacherFormModal: React.FC<TeacherFormModalProps> = ({
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (!teacher.phone) {
+    if (!teacher.profile.phone) {
       newErrors.phone = 'Phone number is required';
     }
 
@@ -173,7 +184,7 @@ const TeacherFormModal: React.FC<TeacherFormModalProps> = ({
                 type="text"
                 id="phone"
                 name="phone"
-                value={teacher.phone}
+                value={teacher.profile.phone}
                 onChange={handleChange}
                 className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
                   errors.phone ? 'border-red-300' : ''

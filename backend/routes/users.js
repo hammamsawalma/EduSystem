@@ -31,7 +31,8 @@ router.post('/',
       check('email', 'Please include a valid email').isEmail(),
       // Make password optional, as we'll generate one if not provided
       check('password', 'Please enter a password with 6 or more characters').optional().isLength({ min: 6 }),
-      check('role', 'Role is required').not().isEmpty()
+      check('role', 'Role is required').not().isEmpty(),
+      check('subject', 'Subject is required for teachers').if(check('role').equals('teacher')).not().isEmpty()
     ]
   ],
   createUser
@@ -49,7 +50,8 @@ router.put('/:id',
       check('email', 'Please include a valid email').optional().isEmail(),
       check('password', 'Please enter a password with 6 or more characters').optional().isLength({ min: 6 }),
       check('role', 'Role is required').optional(),
-      check('status', 'Status is required').optional()
+      check('status', 'Status is required').optional(),
+      check('subject', 'Subject is required for teachers').optional()
     ]
   ],
   updateUser

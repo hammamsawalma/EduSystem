@@ -22,14 +22,15 @@ const register = async (req, res) => {
       phone,
       address,
       dateOfBirth,
-      emergencyContact
+      emergencyContact,
+      subject
     } = req.body;
 
     // Validate required fields
-    if (!email || !password || !firstName || !lastName) {
+    if (!email || !password || !firstName || !lastName || !subject) {
       return res.status(400).json({
         success: false,
-        message: 'Email, password, first name, and last name are required.'
+        message: 'Email, password, first name, last name, and subject are required.'
       });
     }
 
@@ -47,6 +48,7 @@ const register = async (req, res) => {
       email: email.toLowerCase(),
       password,
       role: 'teacher',
+      subject,
       profile: {
         firstName,
         lastName,
@@ -70,6 +72,7 @@ const register = async (req, res) => {
           email: user.email,
           firstName: user.profile.firstName,
           lastName: user.profile.lastName,
+          subject: user.subject,
           status: user.status
         }
       }
