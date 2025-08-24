@@ -85,7 +85,7 @@ const TeacherDetailsModal: React.FC<TeacherDetailsModalProps> = ({
                   </div>
                   <div className="flex items-center">
                     <Phone className="h-4 w-4 text-gray-400 mr-3" />
-                    <span className="text-sm text-gray-900">{teacher.phone}</span>
+                    <span className="text-sm text-gray-900">{teacher.profile.phone}</span>
                   </div>
                 </div>
               </div>

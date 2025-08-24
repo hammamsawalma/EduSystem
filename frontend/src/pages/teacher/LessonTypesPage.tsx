@@ -281,7 +281,7 @@ const LessonTypesPage: React.FC = () => {
             <option value="">All Teachers</option>
             {teachers.map((teacher) => (
               <option key={teacher._id} value={teacher._id}>
-                {teacher.firstName} {teacher.lastName}
+                {teacher.profile.firstName} {teacher.profile.lastName}
               </option>
             ))}
           </select>
@@ -313,7 +313,7 @@ const LessonTypesPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">
               {selectedTeacherFilter 
-                ? `Lesson Types for ${teachers.find(t => t._id === selectedTeacherFilter)?.firstName} ${teachers.find(t => t._id === selectedTeacherFilter)?.lastName}`
+                ? `Lesson Types for ${teachers.find(t => t._id === selectedTeacherFilter)?.profile.firstName} ${teachers.find(t => t._id === selectedTeacherFilter)?.profile.lastName}`
                 : user?.role === 'admin' ? 'All Lesson Types' : 'Your Lesson Types'
               }
             </h2>
@@ -519,7 +519,7 @@ const LessonTypesPage: React.FC = () => {
                         <option value="">Select a teacher...</option>
                         {teachers.map((teacher) => (
                           <option key={teacher._id} value={teacher._id}>
-                            {teacher.firstName} {teacher.lastName} ({teacher.email})
+                            {teacher.profile.firstName} {teacher.profile.lastName} ({teacher.email})
                           </option>
                         ))}
                       </select>
