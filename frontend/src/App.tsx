@@ -18,6 +18,7 @@ import StudentList from './pages/teacher/StudentList';
 import TimeTracking from './pages/teacher/TimeTracking';
 import FinancialSummary from './pages/teacher/FinancialSummary';
 import LessonTypesPage from './pages/teacher/LessonTypesPage';
+import ReportsPage from './pages/teacher/ReportsPage';
 import TeachersPage from './pages/admin/TeachersPage';
 import SystemSettings from './pages/admin/SystemSettings';
 
@@ -91,6 +92,14 @@ const AppContent: React.FC = () => {
             <AuthGuard>
               <DashboardLayout>
                 <FinancialSummary />
+              </DashboardLayout>
+            </AuthGuard>
+          } />
+          
+          <Route path="/reports" element={
+            <AuthGuard>
+              <DashboardLayout>
+                <ReportsPage />
               </DashboardLayout>
             </AuthGuard>
           } />

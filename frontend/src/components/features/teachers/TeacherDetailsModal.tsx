@@ -61,7 +61,7 @@ const TeacherDetailsModal: React.FC<TeacherDetailsModalProps> = ({
               </div>
               <div className="ml-4">
                 <h4 className="text-xl font-semibold text-gray-900">
-                  {teacher.firstName} {teacher.lastName}
+                  {teacher.profile.firstName} {teacher.profile.lastName}
                 </h4>
                 <div className="mt-1">
                   <span className={getStatusBadge(teacher.status)}>
@@ -117,7 +117,7 @@ const TeacherDetailsModal: React.FC<TeacherDetailsModalProps> = ({
                 <div className="space-y-2">
                   <div className="flex items-center">
                     <Shield className="h-4 w-4 text-gray-400 mr-3" />
-                    <span className="text-sm text-gray-900">Teacher ID: {teacher.id}</span>
+                    <span className="text-sm text-gray-900">Teacher ID: {teacher._id}</span>
                   </div>
                   <div className="flex items-center">
                     <Shield className="h-4 w-4 text-gray-400 mr-3" />

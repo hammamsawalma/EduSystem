@@ -96,8 +96,8 @@ const TeachersPage: React.FC = () => {
     // Safe search with null checks
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = 
-      (teacher.firstName?.toLowerCase() || '').includes(searchLower) ||
-      (teacher.lastName?.toLowerCase() || '').includes(searchLower) ||
+      (teacher.profile.firstName?.toLowerCase() || '').includes(searchLower) ||
+      (teacher.profile.lastName?.toLowerCase() || '').includes(searchLower) ||
       (teacher.email?.toLowerCase() || '').includes(searchLower) ||
       (teacher.phone?.toLowerCase() || '').includes(searchLower);
     
@@ -116,12 +116,12 @@ const TeachersPage: React.FC = () => {
   const paginate = (pageNumber: number) => setCurrentPage(pageNumber);
   
   // Handle bulk selection
-  const [selectedTeachers, setSelectedTeachers] = useState<number[]>([]);
+  const [selectedTeachers, setSelectedTeachers] = useState<string[]>([]);
   const [showBulkActions, setShowBulkActions] = useState(false);
   
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.checked) {
-      setSelectedTeachers(currentTeachers.map(teacher => teacher.id));
+      setSelectedTeachers(currentTeachers.map(teacher => teacher._id));
       setShowBulkActions(true);
     } else {
       setSelectedTeachers([]);
@@ -129,7 +129,7 @@ const TeachersPage: React.FC = () => {
     }
   };
   
-  const handleSelectTeacher = (e: React.ChangeEvent<HTMLInputElement>, teacherId: number) => {
+  const handleSelectTeacher = (e: React.ChangeEvent<HTMLInputElement>, teacherId: string) => {
     if (e.target.checked) {
       setSelectedTeachers(prev => [...prev, teacherId]);
     } else {
@@ -234,8 +234,8 @@ const TeachersPage: React.FC = () => {
     const csvContent = [
       headers.join(','),
       ...filteredTeachers.map(teacher => [
-        teacher.firstName,
-        teacher.lastName,
+        teacher.profile.firstName,
+        teacher.profile.lastName,
         teacher.email,
         teacher.phone,
         teacher.subject,
@@ -282,18 +282,18 @@ const TeachersPage: React.FC = () => {
   
   // Edit teacher handler
   const handleEditTeacher = async (formData: TeacherFormData) => {
-    if (!formData.id) return;
-    
+    if (!formData._id) return;
+
     try {
       setError(null);
       
       // Call API to update teacher
-      const updatedTeacher = await teacherService.updateTeacher(formData.id, formData);
+      const updatedTeacher = await teacherService.updateTeacher(formData._id, formData);
       
       // Update the state
       setTeachers(prevTeachers => 
         prevTeachers.map(teacher => 
-          teacher.id === updatedTeacher.id ? updatedTeacher : teacher
+          teacher._id === updatedTeacher._id ? updatedTeacher : teacher
         )
       );
       
@@ -317,11 +317,11 @@ const TeachersPage: React.FC = () => {
         setError(null);
         
         // Call API to delete teacher
-        await teacherService.deleteTeacher(selectedTeacher.id);
+        await teacherService.deleteTeacher(selectedTeacher._id);
         
         // Update the state
         setTeachers(prevTeachers => 
-          prevTeachers.filter(teacher => teacher.id !== selectedTeacher.id)
+          prevTeachers.filter(teacher => teacher._id !== selectedTeacher._id)
         );
         
         // Close the modal
@@ -347,12 +347,12 @@ const TeachersPage: React.FC = () => {
         setError(null);
         
         // Call API to approve teacher
-        const updatedTeacher = await teacherService.updateTeacherStatus(selectedTeacher.id, 'Active');
+        const updatedTeacher = await teacherService.updateTeacherStatus(selectedTeacher._id, 'Active');
         
         // Update the state
         setTeachers(prevTeachers => 
           prevTeachers.map(teacher => 
-            teacher.id === selectedTeacher.id ? updatedTeacher : teacher
+            teacher._id === selectedTeacher._id ? updatedTeacher : teacher
           )
         );
         
@@ -379,12 +379,12 @@ const TeachersPage: React.FC = () => {
         setError(null);
         
         // Call API to block teacher
-        const updatedTeacher = await teacherService.updateTeacherStatus(selectedTeacher.id, 'Blocked');
+        const updatedTeacher = await teacherService.updateTeacherStatus(selectedTeacher._id, 'Blocked');
         
         // Update the state
         setTeachers(prevTeachers => 
           prevTeachers.map(teacher => 
-            teacher.id === selectedTeacher.id ? updatedTeacher : teacher
+            teacher._id === selectedTeacher._id ? updatedTeacher : teacher
           )
         );
         
@@ -556,12 +556,12 @@ const TeachersPage: React.FC = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentTeachers.map((teacher) => (
-                  <tr key={teacher.id} className="hover:bg-gray-50">
+                  <tr key={teacher._id} className="hover:bg-gray-50">
                     <td className="px-2 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
-                        checked={selectedTeachers.includes(teacher.id)}
-                        onChange={(e) => handleSelectTeacher(e, teacher.id)}
+                        checked={selectedTeachers.includes(teacher._id)}
+                        onChange={(e) => handleSelectTeacher(e, teacher._id)}
                         className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                       />
                     </td>
@@ -571,7 +571,7 @@ const TeachersPage: React.FC = () => {
                           <User className="h-5 w-5 text-primary-600" />
                         </div>
                         <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{teacher.firstName} {teacher.lastName}</div>
+                          <div className="text-sm font-medium text-gray-900">{teacher.profile.firstName} {teacher.profile.lastName}</div>
                         </div>
                       </div>
                     </td>
@@ -603,7 +603,7 @@ const TeachersPage: React.FC = () => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <TeacherActionsMenu
-                        teacherId={teacher.id}
+                        teacherId={teacher._id}
                         teacherStatus={teacher.status}
                         onView={() => {
                           setSelectedTeacher(teacher);
@@ -742,7 +742,7 @@ const TeachersPage: React.FC = () => {
         }}
         onConfirm={handleDeleteTeacher}
         title="Delete Teacher"
-        message={`Are you sure you want to delete ${selectedTeacher?.firstName} ${selectedTeacher?.lastName}? This action cannot be undone.`}
+        message={`Are you sure you want to delete ${selectedTeacher?.profile.firstName} ${selectedTeacher?.profile.lastName}? This action cannot be undone.`}
         confirmText={isDeletingTeacher ? "Deleting..." : "Delete"}
         cancelText="Cancel"
         type="danger"
@@ -757,7 +757,7 @@ const TeachersPage: React.FC = () => {
         }}
         onConfirm={handleApproveTeacher}
         title="Approve Teacher"
-        message={`Are you sure you want to approve ${selectedTeacher?.firstName} ${selectedTeacher?.lastName}? They will have access to the system.`}
+        message={`Are you sure you want to approve ${selectedTeacher?.profile.firstName} ${selectedTeacher?.profile.lastName}? They will have access to the system.`}
         confirmText={isApprovingTeacher ? "Approving..." : "Approve"}
         cancelText="Cancel"
         type="success"
@@ -772,7 +772,7 @@ const TeachersPage: React.FC = () => {
         }}
         onConfirm={handleBlockTeacher}
         title="Block Teacher"
-        message={`Are you sure you want to block ${selectedTeacher?.firstName} ${selectedTeacher?.lastName}? They will lose access to the system.`}
+        message={`Are you sure you want to block ${selectedTeacher?.profile.firstName} ${selectedTeacher?.profile.lastName}? They will lose access to the system.`}
         confirmText={isBlockingTeacher ? "Blocking..." : "Block"}
         cancelText="Cancel"
         type="warning"

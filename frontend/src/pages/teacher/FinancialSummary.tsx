@@ -1,20 +1,39 @@
 import React, { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
-import { fetchEarningsSummary, fetchExpenses } from '../../store/slices/financialSlice';
+import { 
+  fetchEarningsSummary, 
+  fetchExpenses, 
+  fetchTimeEntries, 
+  fetchPayments
+} from '../../store/slices/financialSlice';
 import { useTeacherDashboardStats } from '../../hooks/useTeacherDashboardStats';
 import { teacherService } from '../../services/teacherService';
+import exportService from '../../services/exportService';
 import type { Teacher } from '../../types/teacher';
 import { DollarSign, TrendingUp, TrendingDown, Download, Eye, Clock, AlertCircle, Users } from 'lucide-react';
+import ReportModal from '../../components/features/reports/ReportModal';
 
 const FinancialSummary: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { expenses, isLoading, error } = useAppSelector((state) => state.financial);
+  const { expenses, timeEntries, payments, earningsSummary, isLoading, error } = useAppSelector((state) => state.financial);
   const { user } = useAppSelector((state) => state.auth);
   
   // Teacher selection for admin
   const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [selectedTeacherId, setSelectedTeacherId] = useState<string>('');
   const [teachersLoading, setTeachersLoading] = useState(false);
+  
+  // State for export format selection
+  const [exportFormat, setExportFormat] = useState<'csv' | 'excel' | 'pdf'>('excel');
+  const [reportModal, setReportModal] = useState<{
+    isOpen: boolean;
+    type: 'monthly' | 'payments' | 'earnings' | null;
+    title: string;
+  }>({
+    isOpen: false,
+    type: null,
+    title: ''
+  });
   
   // Get teacher dashboard stats (only if teacher is selected for admin or user is teacher)
   const {
@@ -98,12 +117,112 @@ const FinancialSummary: React.FC = () => {
         endDate: dateFilter.endDate
       }));
       dispatch(fetchExpenses({}));
+      dispatch(fetchTimeEntries({
+        startDate: dateFilter.startDate,
+        endDate: dateFilter.endDate
+      }));
+      dispatch(fetchPayments({
+        startDate: dateFilter.startDate,
+        endDate: dateFilter.endDate
+      }));
     }
   }, [dispatch, dateFilter, user?.role, user?.id, selectedTeacherId]);
 
-  const handleExportReport = () => {
-    // TODO: Implement export functionality
-    console.log('Exporting financial report...');
+  const handleExportReport = async (format: 'csv' | 'excel' | 'pdf' = 'excel') => {
+    try {
+      // Export time entries as the main financial report
+      await exportService.exportTimeEntries({
+        format,
+        startDate: dateFilter.startDate,
+        endDate: dateFilter.endDate
+      });
+      alert(`Financial report exported successfully as ${format.toUpperCase()}!`);
+    } catch (error) {
+      console.error('Failed to export report:', error);
+      alert('Export failed. Please try again.');
+    }
+  };
+
+  // Report modal handlers
+  const openReportModal = (type: 'monthly' | 'payments' | 'earnings', title: string) => {
+    setReportModal({
+      isOpen: true,
+      type,
+      title
+    });
+  };
+
+  const closeReportModal = () => {
+    setReportModal({
+      isOpen: false,
+      type: null,
+      title: ''
+    });
+  };
+
+  // Export handlers for specific reports
+  const handleExportMonthlyReport = async () => {
+    try {
+      // Export both time entries and expenses for monthly summary
+      await Promise.all([
+        exportService.exportTimeEntries({
+          format: exportFormat,
+          startDate: dateFilter.startDate,
+          endDate: dateFilter.endDate
+        }),
+        exportService.exportExpenses({
+          format: exportFormat,
+          startDate: dateFilter.startDate,
+          endDate: dateFilter.endDate
+        })
+      ]);
+      alert(`Monthly report exported successfully as ${exportFormat.toUpperCase()}! Check your downloads for both time entries and expenses files.`);
+    } catch (error) {
+      console.error('Failed to export monthly report:', error);
+      alert('Export failed. Please try again.');
+    }
+  };
+
+  const handleExportPaymentsReport = async () => {
+    try {
+      await exportService.exportPayments({
+        format: exportFormat,
+        startDate: dateFilter.startDate,
+        endDate: dateFilter.endDate
+      });
+      alert(`Payments report exported successfully as ${exportFormat.toUpperCase()}!`);
+    } catch (error) {
+      console.error('Failed to export payments report:', error);
+      alert('Export failed. Please try again.');
+    }
+  };
+
+  const handleExportEarningsReport = async () => {
+    try {
+      await exportService.exportTimeEntries({
+        format: exportFormat,
+        startDate: dateFilter.startDate,
+        endDate: dateFilter.endDate
+      });
+      alert(`Earnings report exported successfully as ${exportFormat.toUpperCase()}!`);
+    } catch (error) {
+      console.error('Failed to export earnings report:', error);
+      alert('Export failed. Please try again.');
+    }
+  };
+
+  // Get export handler based on modal type
+  const getExportHandler = () => {
+    switch (reportModal.type) {
+      case 'monthly':
+        return handleExportMonthlyReport;
+      case 'payments':
+        return handleExportPaymentsReport;
+      case 'earnings':
+        return handleExportEarningsReport;
+      default:
+        return () => handleExportReport(exportFormat);
+    }
   };
 
   if (isLoading || statsLoading || teachersLoading) {
@@ -166,7 +285,7 @@ const FinancialSummary: React.FC = () => {
               <option value="">Choose a teacher...</option>
               {teachers.map((teacher) => (
                 <option key={teacher._id} value={teacher._id}>
-                  {teacher.firstName} {teacher.lastName} ({teacher.email})
+                  {(teacher as any).profile.firstName} {(teacher as any).profile.lastName} ({teacher.email})
                 </option>
               ))}
             </select>
@@ -188,7 +307,7 @@ const FinancialSummary: React.FC = () => {
           </h1>
           <p className="text-gray-600">
             {user?.role === 'admin' 
-              ? `Track earnings, expenses, and financial performance for ${teachers.find(t => t._id === selectedTeacherId)?.firstName} ${teachers.find(t => t._id === selectedTeacherId)?.lastName}`
+              ? `Track earnings, expenses, and financial performance for ${teachers.find(t => t._id === selectedTeacherId)?.profile.firstName} ${teachers.find(t => t._id === selectedTeacherId)?.profile.lastName}`
               : 'Track your earnings, expenses, and financial performance'
             }
           </p>
@@ -198,20 +317,29 @@ const FinancialSummary: React.FC = () => {
             <select
               value={selectedTeacherId}
               onChange={(e) => setSelectedTeacherId(e.target.value)}
-              className="form-input"
+              className="form-input min-w-48"
               disabled={teachersLoading}
             >
-              <option value="">Select teacher...</option>
+              <option className='text-gray-500' value="">Select teacher...</option>
               {teachers.map((teacher) => (
                 <option key={teacher._id} value={teacher._id}>
-                  {teacher.firstName} {teacher.lastName}
+                  {(teacher as any).profile.firstName} {(teacher as any).profile.lastName}
                 </option>
               ))}
             </select>
           )}
+          <select
+            value={exportFormat}
+            onChange={(e) => setExportFormat(e.target.value as 'csv' | 'excel' | 'pdf')}
+            className="form-input min-w-20"
+          >
+            <option value="excel">Excel</option>
+            <option value="csv">CSV</option>
+            <option value="pdf">PDF</option>
+          </select>
           <button 
-            onClick={handleExportReport}
-            className="btn btn-primary flex items-center"
+            onClick={() => handleExportReport(exportFormat)}
+            className="btn btn-primary flex items-center min-w-44"
           >
             <Download className="w-4 h-4 mr-2" />
             Export Report
@@ -383,14 +511,14 @@ const FinancialSummary: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4">Detailed breakdown of earnings and expenses</p>
             <div className="flex space-x-2">
               <button 
-                onClick={() => console.log('View monthly summary')}
+                onClick={() => openReportModal('monthly', 'Monthly Summary Report')}
                 className="btn btn-secondary btn-sm flex items-center"
               >
                 <Eye className="w-4 h-4 mr-1" />
                 View
               </button>
               <button 
-                onClick={handleExportReport}
+                onClick={handleExportMonthlyReport}
                 className="btn btn-primary btn-sm flex items-center"
               >
                 <Download className="w-4 h-4 mr-1" />
@@ -403,14 +531,14 @@ const FinancialSummary: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4">Track payments from your students</p>
             <div className="flex space-x-2">
               <button 
-                onClick={() => console.log('View student payments')}
+                onClick={() => openReportModal('payments', 'Student Payments Report')}
                 className="btn btn-secondary btn-sm flex items-center"
               >
                 <Eye className="w-4 h-4 mr-1" />
                 View
               </button>
               <button 
-                onClick={handleExportReport}
+                onClick={handleExportPaymentsReport}
                 className="btn btn-primary btn-sm flex items-center"
               >
                 <Download className="w-4 h-4 mr-1" />
@@ -423,14 +551,14 @@ const FinancialSummary: React.FC = () => {
             <p className="text-sm text-gray-600 mb-4">Detailed earnings breakdown by lesson type</p>
             <div className="flex space-x-2">
               <button 
-                onClick={() => console.log('View earnings summary')}
+                onClick={() => openReportModal('earnings', 'Earnings Summary Report')}
                 className="btn btn-secondary btn-sm flex items-center"
               >
                 <Eye className="w-4 h-4 mr-1" />
                 View
               </button>
               <button 
-                onClick={handleExportReport}
+                onClick={handleExportEarningsReport}
                 className="btn btn-primary btn-sm flex items-center"
               >
                 <Download className="w-4 h-4 mr-1" />
@@ -441,50 +569,26 @@ const FinancialSummary: React.FC = () => {
         </div>
       </div>
 
-      {/* Additional Stats Section */}
-      {/* {earningsSummary && (
-        <div className="card">
-          <div className="card-header">
-            <h3 className="text-lg font-semibold text-gray-900">Earnings Breakdown</h3>
-          </div>
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">Total Hours</p>
-                <p className="text-2xl font-bold text-gray-900">{earningsSummary.summary.totalHours}</p>
-              </div>
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">Average Rate</p>
-                <p className="text-2xl font-bold text-gray-900">${earningsSummary.summary.averageHourlyRate.toFixed(2)}</p>
-              </div>
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">Total Sessions</p>
-                <p className="text-2xl font-bold text-gray-900">{earningsSummary.summary.entryCount}</p>
-              </div>
-            </div>
-            
-            {earningsSummary.breakdown.length > 0 && (
-              <div>
-                <h4 className="font-medium text-gray-900 mb-3">By Lesson Type</h4>
-                <div className="space-y-3">
-                  {earningsSummary.breakdown.map((item, index) => (
-                    <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                      <div>
-                        <p className="font-medium text-gray-900">{item._id.name}</p>
-                        <p className="text-sm text-gray-600">{item.totalHours} hours • {item.entryCount} sessions</p>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-semibold text-gray-900">${item.totalEarnings.toFixed(2)}</p>
-                        <p className="text-sm text-gray-600">${item.averageHourlyRate.toFixed(2)}/hr</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )} */}
+      {/* Report Modal */}
+      {reportModal.isOpen && (
+        <ReportModal
+          isOpen={reportModal.isOpen}
+          onClose={closeReportModal}
+          title={reportModal.title}
+          reportType={reportModal.type!}
+          data={{
+            timeEntries: timeEntries || [],
+            expenses: expenses || [],
+            payments: payments || [],
+            earningsSummary: earningsSummary || undefined,
+            dateRange: {
+              startDate: dateFilter.startDate,
+              endDate: dateFilter.endDate
+            }
+          }}
+          onExport={getExportHandler()}
+        />
+      )}
     </div>
   );
 };

@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MoreVertical, Edit, Trash2, Eye, CheckCircle, XCircle } from 'lucide-react';
 
 interface TeacherActionsMenuProps {
-  teacherId?: number;
+  teacherId?: string;
   teacherStatus: string;
   onView?: () => void;
   onEdit?: () => void;

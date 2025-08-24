@@ -11,8 +11,7 @@ interface TeacherFormModalProps {
 }
 
 const defaultTeacher: TeacherFormData = {
-  firstName: '',
-  lastName: '',
+  profile: { firstName: '', lastName: '' },
   email: '',
   phone: '',
   subject: '',
@@ -57,11 +56,11 @@ const TeacherFormModal: React.FC<TeacherFormModalProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!teacher.firstName) {
+    if (!teacher.profile.firstName) {
       newErrors.firstName = 'First name is required';
     }
 
-    if (!teacher.lastName) {
+    if (!teacher.profile.lastName) {
       newErrors.lastName = 'Last name is required';
     }
 
@@ -116,7 +115,7 @@ const TeacherFormModal: React.FC<TeacherFormModalProps> = ({
                   type="text"
                   id="firstName"
                   name="firstName"
-                  value={teacher.firstName}
+                  value={teacher.profile.firstName}
                   onChange={handleChange}
                   className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
                     errors.firstName ? 'border-red-300' : ''
@@ -135,7 +134,7 @@ const TeacherFormModal: React.FC<TeacherFormModalProps> = ({
                   type="text"
                   id="lastName"
                   name="lastName"
-                  value={teacher.lastName}
+                  value={teacher.profile.lastName}
                   onChange={handleChange}
                   className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
                     errors.lastName ? 'border-red-300' : ''

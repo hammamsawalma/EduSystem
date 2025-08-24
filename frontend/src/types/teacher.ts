@@ -1,7 +1,9 @@
 export interface Teacher {
   _id: string;
-  firstName: string;
-  lastName: string;
+  profile: {
+    firstName: string;
+    lastName: string;
+  }
   email: string;
   phone: string;
   subject: string;
@@ -9,7 +11,7 @@ export interface Teacher {
   status: string;
 }
 
-export type TeacherFormData = Omit<Teacher, 'id' | 'joinDate'> & {
-  id?: string;
+export type TeacherFormData = Omit<Teacher, '_id' | 'joinDate'> & {
+  _id?: string;
   joinDate?: string;
 };

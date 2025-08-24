@@ -349,6 +349,124 @@ export const fetchEarningsSummary = createAsyncThunk(
   }
 );
 
+// Export functions
+export const exportMonthlyReport = createAsyncThunk(
+  'financial/exportMonthlyReport',
+  async (params: { startDate: string; endDate: string; format?: string; teacherId?: string }, { rejectWithValue }) => {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('startDate', params.startDate);
+      queryParams.append('endDate', params.endDate);
+      queryParams.append('format', params.format || 'excel');
+      if (params.teacherId) {
+        queryParams.append('teacherId', params.teacherId);
+      }
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/exports/monthly-summary?${queryParams.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `monthly-report-${params.startDate}-to-${params.endDate}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      return 'Export completed successfully';
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to export monthly report');
+    }
+  }
+);
+
+export const exportPaymentsReport = createAsyncThunk(
+  'financial/exportPaymentsReport',
+  async (params: { startDate: string; endDate: string; format?: string; teacherId?: string }, { rejectWithValue }) => {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('startDate', params.startDate);
+      queryParams.append('endDate', params.endDate);
+      queryParams.append('format', params.format || 'excel');
+      if (params.teacherId) {
+        queryParams.append('teacherId', params.teacherId);
+      }
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/exports/payments?${queryParams.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `payments-report-${params.startDate}-to-${params.endDate}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      return 'Export completed successfully';
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to export payments report');
+    }
+  }
+);
+
+export const exportEarningsReport = createAsyncThunk(
+  'financial/exportEarningsReport',
+  async (params: { startDate: string; endDate: string; format?: string; teacherId?: string }, { rejectWithValue }) => {
+    try {
+      const queryParams = new URLSearchParams();
+      queryParams.append('startDate', params.startDate);
+      queryParams.append('endDate', params.endDate);
+      queryParams.append('format', params.format || 'excel');
+      if (params.teacherId) {
+        queryParams.append('teacherId', params.teacherId);
+      }
+      
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:5001/api'}/exports/time-entries?${queryParams.toString()}`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Export failed');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `earnings-report-${params.startDate}-to-${params.endDate}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      return 'Export completed successfully';
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to export earnings report');
+    }
+  }
+);
+
 // Financial slice
 const financialSlice = createSlice({
   name: 'financial',

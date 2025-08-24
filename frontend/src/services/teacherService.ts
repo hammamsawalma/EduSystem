@@ -44,7 +44,7 @@ export const teacherService = {
   },
 
   // Update an existing teacher
-  async updateTeacher(id: number, teacherData: TeacherFormData): Promise<Teacher> {
+  async updateTeacher(id: string, teacherData: TeacherFormData): Promise<Teacher> {
     try {
       const response = await api.put(`${BASE_URL}/${id}`, teacherData);
       return response.data.data;
@@ -55,7 +55,7 @@ export const teacherService = {
   },
 
   // Delete a teacher
-  async deleteTeacher(id: number): Promise<void> {
+  async deleteTeacher(id: string): Promise<void> {
     try {
       await api.delete(`${BASE_URL}/${id}`);
     } catch (error) {
@@ -65,7 +65,7 @@ export const teacherService = {
   },
 
   // Update teacher status (approve, block, etc.)
-  async updateTeacherStatus(id: number, status: string): Promise<Teacher> {
+  async updateTeacherStatus(id: string, status: string): Promise<Teacher> {
     try {
       const response = await api.patch(`${BASE_URL}/${id}/status`, { status });
       return response.data.data;
