@@ -375,19 +375,13 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({
                     onChange={handleAcademicInfoChange}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
                   >
-                    <option value="">Select Grade</option>
-                    <option value="1st Grade">1st Grade</option>
-                    <option value="2nd Grade">2nd Grade</option>
-                    <option value="3rd Grade">3rd Grade</option>
-                    <option value="4th Grade">4th Grade</option>
-                    <option value="5th Grade">5th Grade</option>
-                    <option value="6th Grade">6th Grade</option>
-                    <option value="7th Grade">7th Grade</option>
-                    <option value="8th Grade">8th Grade</option>
-                    <option value="9th Grade">9th Grade</option>
-                    <option value="10th Grade">10th Grade</option>
-                    <option value="11th Grade">11th Grade</option>
-                    <option value="12th Grade">12th Grade</option>
+                    <option className='text-gray-500' value="">Select Grade</option>
+                    <option value="A1">A1</option>
+                    <option value="A2">A2</option>
+                    <option value="B1">B1</option>
+                    <option value="B2">B2</option>
+                    <option value="C1">C1</option>
+                    <option value="C2">C2</option>
                   </select>
                 </div>
                 
