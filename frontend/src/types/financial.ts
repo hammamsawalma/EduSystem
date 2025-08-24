@@ -1,6 +1,13 @@
 export interface LessonType {
   _id: string;
-  teacherId: string;
+  teacherId: {
+    profile: {
+      firstName: string;
+      lastName: string;
+    };
+    _id: string;
+    email: string;
+  };
   name: string;
   description?: string;
   hourlyRate: number;
@@ -8,6 +15,23 @@ export interface LessonType {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface CreateLessonTypeData {
+  teacherId: string;
+  name: string;
+  description?: string;
+  hourlyRate: number;
+  currency: string;
+  isActive: boolean;
+}
+
+export interface UpdateLessonTypeData {
+  name?: string;
+  description?: string;
+  hourlyRate?: number;
+  currency?: string;
+  isActive?: boolean;
 }
 
 export interface TimeEntry {
@@ -33,7 +57,16 @@ export interface TimeEntry {
   totalAmount: number;
   currency: string;
   description?: string;
-  studentId?: string | null;
+  studentId?: {
+    _id: string;
+    personalInfo: {
+      firstName: string;
+      lastName: string;
+    };
+    fullName: string;
+    parentContact: string;
+    id: string;
+  } | null;
   editHistory: {
     previousHours: number;
     previousAmount: number;

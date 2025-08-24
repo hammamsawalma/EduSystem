@@ -191,7 +191,7 @@ const TimeTracking: React.FC = () => {
       date: entry.date.split("T")[0],
       hoursWorked: entry.hoursWorked,
       description: entry.description || "",
-      studentId: entry.studentId || "",
+      studentId: entry.studentId?._id || entry.studentId?.id || "",
     });
     setIsModalOpen(true);
   };
@@ -391,14 +391,11 @@ const TimeTracking: React.FC = () => {
                   {timeEntries.map((entry) => (
                     <tr key={entry._id}>
                       <td className="table-cell">{formatDate(entry.date)}</td>
-                      <td className="table-cell">{entry.lessonTypeId.name}</td>
+                      <td className="table-cell">{entry.lessonTypeId?.name}</td>
                       <td className="table-cell">
                         {entry.studentId
-                          ? students.find((s) => s._id === entry.studentId)
-                              ?.personalInfo?.firstName +
-                              " " +
-                              students.find((s) => s._id === entry.studentId)
-                                ?.personalInfo?.lastName || "Unknown"
+                          ? entry.studentId.fullName || 
+                            `${entry.studentId.personalInfo?.firstName || ''} ${entry.studentId.personalInfo?.lastName || ''}`.trim()
                           : "N/A"}
                       </td>
                       <td className="table-cell">{entry.hoursWorked}</td>

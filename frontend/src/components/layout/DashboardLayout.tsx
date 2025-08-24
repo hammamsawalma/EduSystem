@@ -14,7 +14,8 @@ import {
   BookOpen,
   TrendingUp,
   FileText,
-  Bell
+  Bell,
+  GraduationCap
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -42,6 +43,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'Teachers', href: '/teachers', icon: Users },
     { name: 'Students', href: '/students', icon: BookOpen },
+    { name: 'Lesson Types', href: '/lesson-types', icon: GraduationCap },
     { name: 'Financial Reports', href: '/financial', icon: TrendingUp },
     { name: 'System Settings', href: '/settings', icon: Settings },
   ];
@@ -49,6 +51,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const teacherNavigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home },
     { name: 'My Students', href: '/students', icon: Users },
+    { name: 'Lesson Types', href: '/lesson-types', icon: GraduationCap },
     { name: 'Time Tracking', href: '/time-tracking', icon: Clock },
     { name: 'Financial Summary', href: '/financial', icon: DollarSign },
     { name: 'Reports', href: '/reports', icon: FileText },

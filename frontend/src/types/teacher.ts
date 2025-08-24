@@ -1,5 +1,5 @@
 export interface Teacher {
-  id: number;
+  _id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -10,6 +10,6 @@ export interface Teacher {
 }
 
 export type TeacherFormData = Omit<Teacher, 'id' | 'joinDate'> & {
-  id?: number;
+  id?: string;
   joinDate?: string;
 };

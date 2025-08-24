@@ -9,6 +9,8 @@ import type {
   Payment,
   CreatePaymentData,
   LessonType,
+  CreateLessonTypeData,
+  UpdateLessonTypeData,
   FinancialSummary,
   EarningsSummaryResponse 
 } from '../../types/financial';
@@ -161,7 +163,7 @@ export const fetchLessonTypes = createAsyncThunk(
 
 export const createLessonType = createAsyncThunk(
   'financial/createLessonType',
-  async (lessonTypeData: Omit<LessonType, '_id' | 'createdAt' | 'updatedAt'>, { rejectWithValue }) => {
+  async (lessonTypeData: CreateLessonTypeData, { rejectWithValue }) => {
     try {
       const response = await apiRequest<LessonType>(
         'POST',
@@ -176,6 +178,47 @@ export const createLessonType = createAsyncThunk(
       return rejectWithValue(response.message || 'Failed to create lesson type');
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to create lesson type');
+    }
+  }
+);
+
+export const updateLessonType = createAsyncThunk(
+  'financial/updateLessonType',
+  async ({ id, data }: { id: string; data: UpdateLessonTypeData }, { rejectWithValue }) => {
+    try {
+      const response = await apiRequest<LessonType>(
+        'PUT',
+        `/lesson-types/${id}`,
+        data
+      );
+      
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      return rejectWithValue(response.message || 'Failed to update lesson type');
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to update lesson type');
+    }
+  }
+);
+
+export const deleteLessonType = createAsyncThunk(
+  'financial/deleteLessonType',
+  async (id: string, { rejectWithValue }) => {
+    try {
+      const response = await apiRequest<{ message: string }>(
+        'DELETE',
+        `/lesson-types/${id}`
+      );
+      
+      if (response.success) {
+        return id;
+      }
+      
+      return rejectWithValue(response.message || 'Failed to delete lesson type');
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to delete lesson type');
     }
   }
 );
@@ -355,6 +398,15 @@ const financialSlice = createSlice({
       })
       .addCase(createLessonType.fulfilled, (state, action) => {
         state.lessonTypes.unshift(action.payload);
+      })
+      .addCase(updateLessonType.fulfilled, (state, action) => {
+        const index = state.lessonTypes.findIndex(lt => lt._id === action.payload._id);
+        if (index !== -1) {
+          state.lessonTypes[index] = action.payload;
+        }
+      })
+      .addCase(deleteLessonType.fulfilled, (state, action) => {
+        state.lessonTypes = state.lessonTypes.filter(lt => lt._id !== action.payload);
       })
       // Expenses
       .addCase(fetchExpenses.fulfilled, (state, action) => {
