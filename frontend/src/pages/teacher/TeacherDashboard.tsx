@@ -1,7 +1,39 @@
 import React from 'react';
 import { Users, DollarSign, Clock, TrendingUp, Calendar, Plus } from 'lucide-react';
+import { useTeacherDashboardStats } from '../../hooks/useTeacherDashboardStats';
 
 const TeacherDashboard: React.FC = () => {
+  const { 
+    myStudents, 
+    weeklyHours, 
+    monthlyEarnings, 
+    avgRate, 
+    recentEntries, 
+    isLoading, 
+    error 
+  } = useTeacherDashboardStats();
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Teacher Dashboard</h1>
+          <p className="text-gray-600">Welcome back! Here's an overview of your teaching activities</p>
+        </div>
+        <div className="card">
+          <div className="p-6 text-center">
+            <p className="text-red-600">Error loading dashboard: {error}</p>
+            <button 
+              onClick={() => window.location.reload()} 
+              className="mt-4 btn btn-primary"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div className="space-y-6">
       {/* Page Header */}
@@ -21,7 +53,9 @@ const TeacherDashboard: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">My Students</p>
-              <p className="text-2xl font-bold text-gray-900">2</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {isLoading ? '...' : myStudents}
+              </p>
             </div>
           </div>
         </div>
@@ -35,7 +69,9 @@ const TeacherDashboard: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">This Week</p>
-              <p className="text-2xl font-bold text-gray-900">6.5h</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {isLoading ? '...' : `${weeklyHours}h`}
+              </p>
             </div>
           </div>
         </div>
@@ -49,7 +85,9 @@ const TeacherDashboard: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">This Month</p>
-              <p className="text-2xl font-bold text-gray-900">$240</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {isLoading ? '...' : `$${monthlyEarnings}`}
+              </p>
             </div>
           </div>
         </div>
@@ -63,7 +101,9 @@ const TeacherDashboard: React.FC = () => {
             </div>
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Avg. Rate</p>
-              <p className="text-2xl font-bold text-gray-900">$28</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {isLoading ? '...' : `$${avgRate}`}
+              </p>
             </div>
           </div>
         </div>
@@ -100,20 +140,28 @@ const TeacherDashboard: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-900">Recent Time Entries</h3>
           </div>
           <div className="space-y-3">
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Individual Math Tutoring</p>
-                <p className="text-xs text-gray-500">1.5 hours • $45</p>
+            {isLoading ? (
+              <div className="flex items-center justify-center p-6">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
               </div>
-              <span className="text-xs text-gray-500">Today</span>
-            </div>
-            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-              <div>
-                <p className="text-sm font-medium text-gray-900">Group Science Classes</p>
-                <p className="text-xs text-gray-500">3 hours • $75</p>
+            ) : recentEntries.length > 0 ? (
+              recentEntries.map((entry) => (
+                <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-900">{entry.lessonType}</p>
+                    <p className="text-xs text-gray-500">
+                      {entry.hours} hours • ${entry.amount}
+                    </p>
+                  </div>
+                  <span className="text-xs text-gray-500">{entry.dateString}</span>
+                </div>
+              ))
+            ) : (
+              <div className="text-center p-6 text-gray-500">
+                <p>No time entries found</p>
+                <p className="text-xs mt-1">Start tracking your time to see entries here</p>
               </div>
-              <span className="text-xs text-gray-500">Yesterday</span>
-            </div>
+            )}
           </div>
         </div>
       </div>

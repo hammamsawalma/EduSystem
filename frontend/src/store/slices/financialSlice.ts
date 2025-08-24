@@ -9,7 +9,8 @@ import type {
   Payment,
   CreatePaymentData,
   LessonType,
-  FinancialSummary 
+  FinancialSummary,
+  EarningsSummaryResponse 
 } from '../../types/financial';
 import { apiRequest } from '../../services/api';
 
@@ -19,6 +20,7 @@ interface FinancialState {
   payments: Payment[];
   lessonTypes: LessonType[];
   summary: FinancialSummary | null;
+  earningsSummary: EarningsSummaryResponse | null;
   pagination: {
     page: number;
     limit: number;
@@ -35,6 +37,7 @@ const initialState: FinancialState = {
   payments: [],
   lessonTypes: [],
   summary: null,
+  earningsSummary: null,
   pagination: {
     page: 1,
     limit: 20,
@@ -111,6 +114,26 @@ export const updateTimeEntry = createAsyncThunk(
       return rejectWithValue(response.message || 'Failed to update time entry');
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to update time entry');
+    }
+  }
+);
+
+export const deleteTimeEntry = createAsyncThunk(
+  'financial/deleteTimeEntry',
+  async (timeEntryId: string, { rejectWithValue }) => {
+    try {
+      const response = await apiRequest<void>(
+        'DELETE',
+        `/time-entries/${timeEntryId}`
+      );
+      
+      if (response.success) {
+        return timeEntryId;
+      }
+      
+      return rejectWithValue(response.message || 'Failed to delete time entry');
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to delete time entry');
     }
   }
 );
@@ -255,6 +278,34 @@ export const createPayment = createAsyncThunk(
   }
 );
 
+// Earnings Summary
+export const fetchEarningsSummary = createAsyncThunk(
+  'financial/fetchEarningsSummary',
+  async (filters: { startDate?: string; endDate?: string } = {}, { rejectWithValue }) => {
+    try {
+      const queryParams = new URLSearchParams();
+      Object.entries(filters).forEach(([key, value]) => {
+        if (value !== undefined && value !== null) {
+          queryParams.append(key, value.toString());
+        }
+      });
+      
+      const response = await apiRequest<EarningsSummaryResponse>(
+        'GET',
+        `/time-entries/earnings-summary?${queryParams.toString()}`
+      );
+      
+      if (response.success && response.data) {
+        return response.data;
+      }
+      
+      return rejectWithValue(response.message || 'Failed to fetch earnings summary');
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Failed to fetch earnings summary');
+    }
+  }
+);
+
 // Financial slice
 const financialSlice = createSlice({
   name: 'financial',
@@ -294,6 +345,10 @@ const financialSlice = createSlice({
           state.timeEntries[index] = action.payload;
         }
       })
+      .addCase(deleteTimeEntry.fulfilled, (state, action) => {
+        state.timeEntries = state.timeEntries.filter(t => t._id !== action.payload);
+        state.pagination.total -= 1;
+      })
       // Lesson Types
       .addCase(fetchLessonTypes.fulfilled, (state, action) => {
         state.lessonTypes = action.payload;
@@ -314,6 +369,20 @@ const financialSlice = createSlice({
       })
       .addCase(createPayment.fulfilled, (state, action) => {
         state.payments.unshift(action.payload);
+      })
+      // Earnings Summary
+      .addCase(fetchEarningsSummary.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchEarningsSummary.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.earningsSummary = action.payload;
+        state.error = null;
+      })
+      .addCase(fetchEarningsSummary.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
       });
   },
 });

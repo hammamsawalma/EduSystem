@@ -160,3 +160,117 @@ exports.getPendingActions = async (req, res) => {
     });
   }
 };
+
+/**
+ * Get teacher-specific dashboard statistics
+ * @route GET /api/dashboard/teacher-stats
+ * @access Private (Teacher)
+ */
+exports.getTeacherDashboardStats = async (req, res) => {
+  try {
+    const teacherId = req.user.id; // From auth middleware
+    
+    // Get teacher's students count
+    const myStudents = await Student.countDocuments({ teacherId });
+    
+    // Get current week data
+    const now = new Date();
+    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    // Get current month data
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+    const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59);
+    
+    // Calculate weekly hours from time entries
+    const weeklyTimeEntries = await TimeEntry.find({
+      teacherId,
+      date: { $gte: startOfWeek, $lte: endOfWeek }
+    });
+    
+    let weeklyHours = 0;
+    weeklyTimeEntries.forEach(entry => {
+      if (entry.hoursWorked) {
+        weeklyHours += entry.hoursWorked;
+      }
+    });
+    
+    // Calculate monthly earnings from time entries
+    const monthlyTimeEntries = await TimeEntry.find({
+      teacherId,
+      date: { $gte: startOfMonth, $lte: endOfMonth }
+    });
+    
+    let monthlyEarnings = 0;
+    let totalHours = 0;
+    monthlyTimeEntries.forEach(entry => {
+      if (entry.totalAmount) {
+        monthlyEarnings += entry.totalAmount;
+      }
+      if (entry.hoursWorked) {
+        totalHours += entry.hoursWorked;
+      }
+    });
+    
+    // Calculate average hourly rate
+    const avgRate = totalHours > 0 ? monthlyEarnings / totalHours : 0;
+    
+    // Get recent time entries (last 5)
+    const recentTimeEntries = await TimeEntry.find({ teacherId })
+      .sort({ date: -1, createdAt: -1 })
+      .limit(5)
+      .populate('lessonTypeId', 'name')
+      .lean();
+    
+    // Format recent entries for frontend
+    const recentEntries = recentTimeEntries.map(entry => ({
+      id: entry._id,
+      lessonType: entry.lessonTypeId?.name || 'Unknown Lesson',
+      hours: entry.hoursWorked,
+      amount: entry.totalAmount,
+      date: entry.date,
+      dateString: getRelativeDateString(entry.date)
+    }));
+    
+    // Return teacher dashboard stats
+    return res.status(200).json({
+      success: true,
+      data: {
+        myStudents,
+        weeklyHours: Math.round(weeklyHours * 100) / 100, // Round to 2 decimal places
+        monthlyEarnings: Math.round(monthlyEarnings * 100) / 100,
+        avgRate: Math.round(avgRate * 100) / 100,
+        recentEntries,
+        lastUpdated: new Date()
+      }
+    });
+  } catch (error) {
+    console.error('Teacher dashboard stats error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fetching teacher dashboard statistics',
+      error: error.message
+    });
+  }
+};
+
+// Helper function to get relative date string
+function getRelativeDateString(date) {
+  const now = new Date();
+  const entryDate = new Date(date);
+  const diffTime = Math.abs(now - entryDate);
+  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+  
+  if (diffDays === 0) {
+    return 'Today';
+  } else if (diffDays === 1) {
+    return 'Yesterday';
+  } else if (diffDays < 7) {
+    return `${diffDays} days ago`;
+  } else {
+    return entryDate.toLocaleDateString();
+  }
+}

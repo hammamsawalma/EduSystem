@@ -26,10 +26,10 @@ const StudentList: React.FC = () => {
 
   // Filter students based on search term
   const filteredStudents = students.filter(student => 
-    student.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.personalInfo.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.academicInfo.grade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student.academicInfo.subjects?.some(subject => 
+    student?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student?.personalInfo?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student?.academicInfo?.grade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student?.academicInfo?.subjects?.some(subject => 
       subject.toLowerCase().includes(searchTerm.toLowerCase())
     )
   );

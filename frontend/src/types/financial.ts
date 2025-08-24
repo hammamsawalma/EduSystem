@@ -238,3 +238,30 @@ export interface ExpensesReport {
     count: number;
   }[];
 }
+
+export interface EarningsSummary {
+  totalEarnings: number;
+  totalHours: number;
+  averageHourlyRate: number;
+  entryCount: number;
+  period: {
+    startDate: string;
+    endDate: string;
+  };
+}
+
+export interface EarningsBreakdown {
+  _id: {
+    lessonTypeId: string;
+    name: string;
+  };
+  totalHours: number;
+  totalEarnings: number;
+  entryCount: number;
+  averageHourlyRate: number;
+}
+
+export interface EarningsSummaryResponse {
+  summary: EarningsSummary;
+  breakdown: EarningsBreakdown[];
+}
