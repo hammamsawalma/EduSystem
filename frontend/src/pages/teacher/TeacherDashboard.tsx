@@ -1,6 +1,7 @@
 import React from 'react';
 import { Users, DollarSign, Clock, TrendingUp, Calendar, Plus } from 'lucide-react';
 import { useTeacherDashboardStats } from '../../hooks/useTeacherDashboardStats';
+import { formatCurrency } from '../../utils/currency';
 
 const TeacherDashboard: React.FC = () => {
   const { 
@@ -86,7 +87,7 @@ const TeacherDashboard: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">This Month</p>
               <p className="text-2xl font-bold text-gray-900">
-                {isLoading ? '...' : `$${monthlyEarnings}`}
+                {isLoading ? '...' : formatCurrency(monthlyEarnings)}
               </p>
             </div>
           </div>
@@ -102,7 +103,7 @@ const TeacherDashboard: React.FC = () => {
             <div className="ml-4">
               <p className="text-sm font-medium text-gray-600">Avg. Rate</p>
               <p className="text-2xl font-bold text-gray-900">
-                {isLoading ? '...' : `$${avgRate}`}
+                {isLoading ? '...' : formatCurrency(avgRate)}
               </p>
             </div>
           </div>

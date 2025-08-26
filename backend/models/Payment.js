@@ -29,8 +29,8 @@ const paymentSchema = new mongoose.Schema({
   currency: {
     type: String,
     required: [true, 'Currency is required'],
-    enum: ['USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'TRY'],
-    default: 'USD',
+    enum: ['DZD', 'USD', 'EUR', 'GBP', 'CAD', 'AUD', 'JPY', 'TRY'],
+    default: 'DZD',
     uppercase: true
   },
   paymentMethod: {

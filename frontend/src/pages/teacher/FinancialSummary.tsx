@@ -12,6 +12,7 @@ import exportService from '../../services/exportService';
 import type { Teacher } from '../../types/teacher';
 import { DollarSign, TrendingUp, TrendingDown, Download, Eye, Clock, AlertCircle, Users } from 'lucide-react';
 import ReportModal from '../../components/features/reports/ReportModal';
+import { formatCurrency } from '../../utils/currency';
 
 const FinancialSummary: React.FC = () => {
   const dispatch = useAppDispatch();
@@ -377,7 +378,7 @@ const FinancialSummary: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Earnings</p>
-              <p className="text-2xl font-bold text-gray-900">${monthlyEarnings.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(monthlyEarnings)}</p>
             </div>
             <div className="w-12 h-12 bg-success-100 rounded-full flex items-center justify-center">
               <DollarSign className="w-6 h-6 text-success-600" />
@@ -394,7 +395,7 @@ const FinancialSummary: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Total Expenses</p>
-              <p className="text-2xl font-bold text-gray-900">${currentMonthExpenses.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(currentMonthExpenses)}</p>
             </div>
             <div className="w-12 h-12 bg-error-100 rounded-full flex items-center justify-center">
               <TrendingDown className="w-6 h-6 text-error-600" />
@@ -420,7 +421,7 @@ const FinancialSummary: React.FC = () => {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm text-gray-600">Net Income</p>
-              <p className="text-2xl font-bold text-gray-900">${netIncome.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-gray-900">{formatCurrency(netIncome)}</p>
             </div>
             <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
               <TrendingUp className="w-6 h-6 text-primary-600" />
@@ -465,7 +466,7 @@ const FinancialSummary: React.FC = () => {
                     <p className="text-sm font-medium text-gray-900">{entry.lessonType}</p>
                     <p className="text-xs text-gray-500">{entry.hours} hours • {entry.dateString}</p>
                   </div>
-                  <span className="text-sm font-medium text-success-600">+${entry.amount.toFixed(2)}</span>
+                  <span className="text-sm font-medium text-success-600">+{formatCurrency(entry.amount)}</span>
                 </div>
               ))
             ) : (
@@ -488,7 +489,7 @@ const FinancialSummary: React.FC = () => {
                     <p className="text-sm font-medium text-gray-900">{expense.category}</p>
                     <p className="text-xs text-gray-500">{expense.description}</p>
                   </div>
-                  <span className="text-sm font-medium text-error-600">-${expense.amount.toFixed(2)}</span>
+                  <span className="text-sm font-medium text-error-600">-{formatCurrency(expense.amount)}</span>
                 </div>
               ))
             ) : (

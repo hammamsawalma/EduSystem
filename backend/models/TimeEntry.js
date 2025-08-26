@@ -46,7 +46,7 @@ const timeEntrySchema = new mongoose.Schema({
   },
   currency: {
     type: String,
-    default: 'USD',
+    default: 'DZD',
     uppercase: true
   },
   description: {

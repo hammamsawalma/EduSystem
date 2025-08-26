@@ -8,6 +8,7 @@ import StudentDetailsModal from '../../components/features/students/StudentDetai
 import StudentActionsMenu from '../../components/features/students/StudentActionsMenu';
 import type { CreateStudentData, Student } from '../../types/student';
 import type { AppDispatch } from '../../store';
+import { formatCurrency } from '../../utils/currency';
 
 const StudentList: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -233,7 +234,7 @@ const StudentList: React.FC = () => {
                       </span>
                     </td>
                     <td className="table-cell">
-                      ${student.paymentInfo.currentBalance.toFixed(2)}
+                      {formatCurrency(student.paymentInfo.currentBalance)}
                     </td>
                     <td className="table-cell">
                       <StudentActionsMenu

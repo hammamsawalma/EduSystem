@@ -498,7 +498,7 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({
                 
                 <div>
                   <label htmlFor="currentBalance" className="block text-sm font-medium text-gray-700">
-                    Current Balance ($)
+                    Current Balance (DA)
                   </label>
                   <input
                     type="number"
@@ -513,7 +513,7 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({
                 
                 <div>
                   <label htmlFor="totalPaid" className="block text-sm font-medium text-gray-700">
-                    Total Paid ($)
+                    Total Paid (DA)
                   </label>
                   <input
                     type="number"

@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Download, Calendar, DollarSign, Clock, FileText, TrendingUp } from 'lucide-react';
 import type { TimeEntry, Expense, Payment, EarningsSummaryResponse } from '../../../types/financial';
+import { formatCurrency as formatCurrencyUtil } from '../../../utils/currency';
 
 interface ReportModalProps {
   isOpen: boolean;
@@ -30,7 +31,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  const formatCurrency = (amount: number) => `$${(amount || 0).toFixed(2)}`;
+  const formatCurrency = (amount: number) => formatCurrencyUtil(amount);
   const formatDate = (dateString: string) => new Date(dateString).toLocaleDateString();
 
   const renderMonthlyReport = () => {

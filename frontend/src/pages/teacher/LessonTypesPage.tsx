@@ -8,6 +8,7 @@ import {
   clearError 
 } from '../../store/slices/financialSlice';
 import { teacherService } from '../../services/teacherService';
+import { formatCurrency } from '../../utils/currency';
 import type { LessonType } from '../../types/financial';
 import type { Teacher } from '../../types/teacher';
 import { 
@@ -50,7 +51,7 @@ const LessonTypesPage: React.FC = () => {
     name: '',
     description: '',
     hourlyRate: 0,
-    currency: 'USD',
+    currency: 'DZD',
     isActive: true,
     teacherId: user?.role === 'admin' ? '' : user?.id || ''
   });
@@ -98,7 +99,7 @@ const LessonTypesPage: React.FC = () => {
       name: '',
       description: '',
       hourlyRate: 0,
-      currency: 'USD',
+      currency: 'DZD',
       isActive: true,
       teacherId: user?.role === 'admin' ? '' : user?.id || ''
     });
@@ -128,7 +129,7 @@ const LessonTypesPage: React.FC = () => {
       errors.hourlyRate = 'Hourly rate must be greater than 0';
     }
 
-    if (!['USD', 'EUR', 'GBP'].includes(formData.currency)) {
+    if (!['DZD', 'USD', 'EUR', 'GBP'].includes(formData.currency)) {
       errors.currency = 'Please select a valid currency';
     }
 
@@ -357,7 +358,6 @@ const LessonTypesPage: React.FC = () => {
                     <th className="table-header-cell">Teacher</th>
                   )}
                   <th className="table-header-cell">Hourly Rate</th>
-                  <th className="table-header-cell">Currency</th>
                   <th className="table-header-cell">Status</th>
                   <th className="table-header-cell">Created</th>
                   <th className="table-header-cell">Actions</th>
@@ -386,12 +386,10 @@ const LessonTypesPage: React.FC = () => {
                     )}
                     <td className="table-cell">
                       <div className="flex items-center gap-1">
-                        <DollarSign className="w-4 h-4 text-green-600" />
-                        <span className="font-semibold text-gray-900">{lessonType.hourlyRate}</span>
+                        <span className="font-semibold text-gray-900">
+                          {formatCurrency(lessonType.hourlyRate, lessonType.currency)}
+                        </span>
                       </div>
-                    </td>
-                    <td className="table-cell">
-                      <span className="text-sm text-gray-600">{lessonType.currency}</span>
                     </td>
                     <td className="table-cell">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -566,9 +564,7 @@ const LessonTypesPage: React.FC = () => {
                       onChange={(e) => handleFormChange('currency', e.target.value)}
                       className={`form-input ${formErrors.currency ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
                     >
-                      <option value="USD">USD - US Dollar</option>
-                      <option value="EUR">EUR - Euro</option>
-                      <option value="GBP">GBP - British Pound</option>
+                      <option value="DZD">DZD - Algerian Dinar</option>
                     </select>
                     {formErrors.currency && (
                       <p className="form-error">{formErrors.currency}</p>

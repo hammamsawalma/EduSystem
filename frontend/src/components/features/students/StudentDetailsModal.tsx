@@ -1,6 +1,7 @@
 import React from 'react';
 import { X, Mail, Phone, Calendar, MapPin, User, GraduationCap, CreditCard, Edit, Trash2 } from 'lucide-react';
 import type { Student } from '../../../types/student';
+import { formatCurrency } from '../../../utils/currency';
 
 interface StudentDetailsModalProps {
   isOpen: boolean;
@@ -228,13 +229,13 @@ const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                       <p className={`text-lg font-semibold ${
                         student.paymentInfo.currentBalance > 0 ? 'text-green-600' : 'text-gray-900'
                       }`}>
-                        ${student.paymentInfo.currentBalance.toFixed(2)}
+                        {formatCurrency(student.paymentInfo.currentBalance)}
                       </p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-500">Total Paid</label>
                       <p className="text-lg font-semibold text-gray-900">
-                        ${student.paymentInfo.totalPaid.toFixed(2)}
+                        {formatCurrency(student.paymentInfo.totalPaid)}
                       </p>
                     </div>
                   </div>

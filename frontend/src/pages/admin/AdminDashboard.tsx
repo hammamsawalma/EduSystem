@@ -3,6 +3,7 @@ import { Users, DollarSign, BookOpen, Clock, AlertCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import useAdminDashboard from '../../hooks/useAdminDashboard';
 import { formatDistanceToNow } from 'date-fns';
+import { formatCurrency as formatCurrencyUtil } from '../../utils/currency';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -16,11 +17,7 @@ const AdminDashboard: React.FC = () => {
   
   // Format currency for display
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', { 
-      style: 'currency', 
-      currency: 'USD',
-      minimumFractionDigits: 0
-    }).format(amount);
+    return formatCurrencyUtil(amount);
   };
   return (
     <div className="space-y-6">

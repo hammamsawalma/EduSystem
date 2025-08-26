@@ -169,7 +169,7 @@ const createExpense = async (req, res) => {
       submittedBy: req.user._id,
       category: category.trim(),
       amount: Number(amount),
-      currency: currency || user.settings.currency || 'USD',
+      currency: currency || user.settings.currency || 'DZD',
       description: description.trim(),
       date: new Date(date),
       receiptUrl: receiptUrl?.trim(),

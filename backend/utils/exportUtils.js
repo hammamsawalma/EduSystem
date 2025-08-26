@@ -207,7 +207,10 @@ class ExportUtils {
    * @param {String} currency - Currency code
    * @returns {String} Formatted currency
    */
-  formatCurrency(value, currency = 'USD') {
+  formatCurrency(value, currency = 'DZD') {
+    if (currency === 'DZD') {
+      return `${(value || 0).toFixed(2)} DA`;
+    }
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: currency

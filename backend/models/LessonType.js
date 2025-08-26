@@ -30,7 +30,7 @@ const lessonTypeSchema = new mongoose.Schema({
   },
   currency: {
     type: String,
-    default: 'USD',
+    default: 'DZD',
     uppercase: true,
     validate: {
       validator: function(value) {

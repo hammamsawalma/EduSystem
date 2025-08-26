@@ -237,7 +237,7 @@ const createPayment = async (req, res) => {
       studentId,
       teacherId: req.user._id,
       amount: parseFloat(amount),
-      currency: currency || 'USD',
+      currency: currency || 'DZD',
       paymentMethod: paymentMethod || 'cash',
       paymentDate: paymentDateObj,
       paymentType: paymentType || 'lesson_payment',

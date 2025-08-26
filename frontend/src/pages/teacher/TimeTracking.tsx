@@ -21,6 +21,7 @@ import {
 } from "../../store/slices/financialSlice";
 import { fetchStudents } from "../../store/slices/studentsSlice";
 import TimeEntryModal from "../../components/features/timeTracking/TimeEntryModal";
+import { formatCurrency as formatCurrencyUtil } from "../../utils/currency";
 import type {
   CreateTimeEntryData,
   UpdateTimeEntryData,
@@ -196,11 +197,8 @@ const TimeTracking: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const formatCurrency = (amount: number, currency: string = "USD") => {
-    return new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: currency,
-    }).format(amount);
+  const formatCurrency = (amount: number, currency: string = "DZD") => {
+    return formatCurrencyUtil(amount, currency);
   };
 
   const formatDate = (dateString: string) => {
