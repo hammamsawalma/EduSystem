@@ -8,7 +8,6 @@ import StudentDetailsModal from '../../components/features/students/StudentDetai
 import StudentActionsMenu from '../../components/features/students/StudentActionsMenu';
 import type { CreateStudentData, Student } from '../../types/student';
 import type { AppDispatch } from '../../store';
-import { formatCurrency } from '../../utils/currency';
 
 const StudentList: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -19,6 +18,8 @@ const StudentList: React.FC = () => {
 
   // Get students data from Redux store
   const { students, isLoading, error } = useAppSelector(state => state.students);
+  const { user } = useAppSelector(state => state.auth);
+  const isAdmin = user?.role === 'admin';
 
   // Fetch students on component mount
   useEffect(() => {
@@ -28,11 +29,10 @@ const StudentList: React.FC = () => {
   // Filter students based on search term
   const filteredStudents = students.filter(student => 
     student?.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student?.personalInfo?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student?.academicInfo?.grade?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    student?.academicInfo?.subjects?.some(subject => 
-      subject.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    student?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student?.level?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student?.nationalId?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    student?.secondaryContact?.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleAddStudent = async (studentData: CreateStudentData) => {
@@ -131,13 +131,15 @@ const StudentList: React.FC = () => {
             {students.length > 0 && ` • ${students.length} student${students.length === 1 ? '' : 's'} total`}
           </p>
         </div>
-        <button 
-          className="btn btn-primary flex items-center"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Student
-        </button>
+        {isAdmin && (
+          <button 
+            className="btn btn-primary flex items-center"
+            onClick={() => setIsModalOpen(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Student
+          </button>
+        )}
       </div>
 
       {/* Filters */}
@@ -173,10 +175,10 @@ const StudentList: React.FC = () => {
             <thead className="table-header">
               <tr>
                 <th className="table-header-cell">Student</th>
-                <th className="table-header-cell">Grade</th>
-                <th className="table-header-cell">Subject</th>
+                <th className="table-header-cell">Level</th>
+                <th className="table-header-cell">National ID</th>
+                <th className="table-header-cell">Secondary Contact</th>
                 <th className="table-header-cell">Status</th>
-                <th className="table-header-cell">Balance</th>
                 <th className="table-header-cell">Actions</th>
               </tr>
             </thead>
@@ -209,18 +211,22 @@ const StudentList: React.FC = () => {
                       <div className="flex items-center">
                         <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
                           <span className="text-sm font-medium text-primary-600">
-                            {student.personalInfo.firstName.charAt(0)}{student.personalInfo.lastName.charAt(0)}
+                            {student.firstName.charAt(0)}{student.lastName.charAt(0)}
                           </span>
                         </div>
                         <div className="ml-3">
                           <p className="text-sm font-medium text-gray-900">{student.fullName}</p>
-                          <p className="text-xs text-gray-500">{student.personalInfo.email || 'No email'}</p>
+                          <p className="text-xs text-gray-500">{student.email || 'No email'}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="table-cell">{student.academicInfo.grade || 'Not specified'}</td>
+                    <td className="table-cell">{student.level || 'Not specified'}</td>
+                    <td className="table-cell">{student.nationalId}</td>
                     <td className="table-cell">
-                      {student.academicInfo.subjects?.join(', ') || 'No subjects'}
+                      <div className="text-sm">
+                        <p className="font-medium">{student.secondaryContact.name}</p>
+                        <p className="text-gray-500 text-xs">{student.secondaryContact.relationship} - {student.secondaryContact.phone}</p>
+                      </div>
                     </td>
                     <td className="table-cell">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -234,17 +240,14 @@ const StudentList: React.FC = () => {
                       </span>
                     </td>
                     <td className="table-cell">
-                      {formatCurrency(student.paymentInfo.currentBalance)}
-                    </td>
-                    <td className="table-cell">
                       <StudentActionsMenu
                         studentId={student.id}
                         studentStatus={student.status}
                         onView={() => handleViewStudent(student)}
-                        onEdit={() => handleEditStudent(student)}
-                        onDelete={() => handleDeleteStudent(student)}
-                        onActivate={() => handleActivateStudent(student)}
-                        onSuspend={() => handleSuspendStudent(student)}
+                        onEdit={isAdmin ? () => handleEditStudent(student) : undefined}
+                        onDelete={isAdmin ? () => handleDeleteStudent(student) : undefined}
+                        onActivate={isAdmin ? () => handleActivateStudent(student) : undefined}
+                        onSuspend={isAdmin ? () => handleSuspendStudent(student) : undefined}
                       />
                     </td>
                   </tr>

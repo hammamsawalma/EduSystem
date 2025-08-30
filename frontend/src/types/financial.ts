@@ -57,16 +57,12 @@ export interface TimeEntry {
   totalAmount: number;
   currency: string;
   description?: string;
-  studentId?: {
+  classId: {
     _id: string;
-    personalInfo: {
-      firstName: string;
-      lastName: string;
-    };
-    fullName: string;
-    parentContact: string;
-    id: string;
-  } | null;
+    name: string;
+    description?: string;
+    teacherId: string;
+  };
   editHistory: {
     previousHours: number;
     previousAmount: number;
@@ -83,14 +79,15 @@ export interface CreateTimeEntryData {
   date: string;
   hoursWorked: number;
   description?: string;
-  studentId?: string;
+  classId: string;
 }
 
 export interface UpdateTimeEntryData {
-  id: string;
+  lessonTypeId?: string;
+  date?: string;
   hoursWorked?: number;
   description?: string;
-  studentId?: string;
+  classId?: string;
 }
 
 export interface TimeEntriesResponse {
@@ -162,14 +159,12 @@ export interface CreateExpenseData {
 export interface Payment {
   _id: string;
   studentId: {
-    personalInfo: {
-      firstName: string;
-      lastName: string;
-      email?: string;
-    };
     _id: string;
-    fullName: string;
-    parentContact: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    primaryPhone: string;
+    level: string;
     id: string;
   };
   teacherId: {

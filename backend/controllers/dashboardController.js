@@ -222,13 +222,11 @@ exports.getTeacherDashboardStats = async (req, res) => {
     const recentTimeEntries = await TimeEntry.find({ teacherId })
       .sort({ date: -1, createdAt: -1 })
       .limit(5)
-      .populate('lessonTypeId', 'name')
       .lean();
     
     // Format recent entries for frontend
     const recentEntries = recentTimeEntries.map(entry => ({
       id: entry._id,
-      lessonType: entry.lessonTypeId?.name || 'Unknown Lesson',
       hours: entry.hoursWorked,
       amount: entry.totalAmount,
       date: entry.date,

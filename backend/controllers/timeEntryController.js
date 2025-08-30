@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const TimeEntry = require('../models/TimeEntry');
 const LessonType = require('../models/LessonType');
-const Student = require('../models/Student');
+const Class = require('../models/Class');
 const { logAuditEntry } = require('../middleware/audit');
 
 // Get all time entries for a teacher
@@ -31,9 +31,9 @@ const getTimeEntries = async (req, res) => {
       }
     }
 
-    // Add lesson type filtering if provided
-    if (req.query.lessonTypeId) {
-      query.lessonTypeId = req.query.lessonTypeId;
+    // Add class filtering if provided
+    if (req.query.classId) {
+      query.classId = req.query.classId;
     }
 
     const page = parseInt(req.query.page) || 1;
@@ -43,7 +43,7 @@ const getTimeEntries = async (req, res) => {
     const timeEntries = await TimeEntry.find(query)
       .populate('teacherId', 'profile.firstName profile.lastName email')
       .populate('lessonTypeId', 'name description hourlyRate currency')
-      .populate('studentId', 'personalInfo.firstName personalInfo.lastName')
+      .populate('classId', 'name description teacherId')
       .sort({ date: -1, createdAt: -1 })
       .skip(skip)
       .limit(limit);
@@ -78,7 +78,7 @@ const getTimeEntry = async (req, res) => {
     const timeEntry = await TimeEntry.findById(req.params.id)
       .populate('teacherId', 'profile.firstName profile.lastName email')
       .populate('lessonTypeId', 'name description hourlyRate currency')
-      .populate('studentId', 'personalInfo.firstName personalInfo.lastName')
+      .populate('classId', 'name description teacherId')
       .populate('editHistory.editedBy', 'profile.firstName profile.lastName');
 
     if (!timeEntry) {
@@ -120,14 +120,14 @@ const createTimeEntry = async (req, res) => {
       date,
       hoursWorked,
       description,
-      studentId
+      classId
     } = req.body;
 
     // Validate required fields
-    if (!lessonTypeId || !date || !hoursWorked) {
+    if (!lessonTypeId || !date || !hoursWorked || !classId) {
       return res.status(400).json({
         success: false,
-        message: 'Lesson type, date, and hours worked are required.'
+        message: 'Lesson type, date, hours worked, and class are required.'
       });
     }
 
@@ -145,6 +145,23 @@ const createTimeEntry = async (req, res) => {
       return res.status(403).json({
         success: false,
         message: 'Access denied. You can only create time entries for your own lesson types.'
+      });
+    }
+
+    // Validate class exists and belongs to teacher
+    const classData = await Class.findById(classId);
+    if (!classData) {
+      return res.status(404).json({
+        success: false,
+        message: 'Class not found.'
+      });
+    }
+
+    // Check if teacher owns this class (unless admin)
+    if (req.user.role !== 'admin' && classData.teacherId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only create time entries for your own classes.'
       });
     }
 
@@ -183,7 +200,7 @@ const createTimeEntry = async (req, res) => {
       totalAmount: Number(hoursWorked) * lessonType.hourlyRate,
       currency: lessonType.currency,
       description: description?.trim(),
-      studentId: studentId || null
+      classId: classId
     });
 
     await timeEntry.save();
@@ -192,7 +209,7 @@ const createTimeEntry = async (req, res) => {
     await timeEntry.populate([
       { path: 'teacherId', select: 'profile.firstName profile.lastName email' },
       { path: 'lessonTypeId', select: 'name description hourlyRate currency' },
-      { path: 'studentId', select: 'personalInfo.firstName personalInfo.lastName' }
+      { path: 'classId', select: 'name description teacherId' }
     ]);
 
     res.status(201).json({
@@ -245,7 +262,7 @@ const updateTimeEntry = async (req, res) => {
       date,
       hoursWorked,
       description,
-      studentId
+      classId
     } = req.body;
 
     // Store previous values for audit log and edit history
@@ -256,7 +273,7 @@ const updateTimeEntry = async (req, res) => {
       hourlyRate: timeEntry.hourlyRate,
       totalAmount: timeEntry.totalAmount,
       description: timeEntry.description,
-      studentId: timeEntry.studentId
+      classId: timeEntry.classId
     };
 
     // Add to edit history
@@ -319,7 +336,26 @@ const updateTimeEntry = async (req, res) => {
 
     // Update other fields
     if (description !== undefined) timeEntry.description = description?.trim();
-    if (studentId !== undefined) timeEntry.studentId = studentId || null;
+    if (classId !== undefined) {
+      // Validate class exists and belongs to teacher
+      const classData = await Class.findById(classId);
+      if (!classData) {
+        return res.status(404).json({
+          success: false,
+          message: 'Class not found.'
+        });
+      }
+
+      // Check if teacher owns this class (unless admin)
+      if (req.user.role !== 'admin' && classData.teacherId.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only assign your own classes.'
+        });
+      }
+
+      timeEntry.classId = classId;
+    }
 
     await timeEntry.save();
 
@@ -327,7 +363,7 @@ const updateTimeEntry = async (req, res) => {
     await timeEntry.populate([
       { path: 'teacherId', select: 'profile.firstName profile.lastName email' },
       { path: 'lessonTypeId', select: 'name description hourlyRate currency' },
-      { path: 'studentId', select: 'personalInfo.firstName personalInfo.lastName' },
+      { path: 'classId', select: 'name description teacherId' },
       { path: 'editHistory.editedBy', select: 'profile.firstName profile.lastName' }
     ]);
 

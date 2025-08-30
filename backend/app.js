@@ -12,7 +12,7 @@ const connectDB = require('./config/database');
 
 // Import routes
 const authRoutes = require('./routes/auth');
-const lessonTypeRoutes = require('./routes/lessonTypes');
+const classRoutes = require('./routes/classes');
 const timeEntryRoutes = require('./routes/timeEntries');
 const expenseRoutes = require('./routes/expenses');
 const studentRoutes = require('./routes/students');
@@ -73,7 +73,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/lesson-types', lessonTypeRoutes);
+app.use('/api/classes', classRoutes);
 app.use('/api/time-entries', timeEntryRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/students', studentRoutes);

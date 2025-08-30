@@ -1,27 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { useAppDispatch, useAppSelector } from '../../hooks/redux';
 import { 
-  fetchLessonTypes, 
-  createLessonType, 
-  updateLessonType, 
-  deleteLessonType,
+  fetchClasses, 
+  createClass, 
+  updateClass, 
+  deleteClass,
   clearError 
-} from '../../store/slices/financialSlice';
+} from '../../store/slices/classesSlice';
 import { teacherService } from '../../services/teacherService';
 import { formatCurrency } from '../../utils/currency';
-import type { LessonType } from '../../types/financial';
+import type { Class } from '../../types/class';
 import type { Teacher } from '../../types/teacher';
+import ClassStudentAssignment from '../../components/features/classes/ClassStudentAssignment';
+import ClassStudentsView from '../../components/features/classes/ClassStudentsView';
 import { 
   Plus, 
   Edit, 
   Trash2, 
-  DollarSign, 
   BookOpen,
   AlertCircle,
-  X
+  X,
+  Users,
+  UserPlus
 } from 'lucide-react';
 
-interface LessonTypeFormData {
+interface ClassFormData {
   name: string;
   description: string;
   hourlyRate: number;
@@ -30,9 +33,9 @@ interface LessonTypeFormData {
   teacherId?: string;
 }
 
-const LessonTypesPage: React.FC = () => {
+const ClassesPage: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { lessonTypes, isLoading, error } = useAppSelector((state) => state.financial);
+  const { classes, isLoading, error } = useAppSelector((state) => state.classes);
   const { user } = useAppSelector((state) => state.auth);
 
   // Teachers state for admin
@@ -44,10 +47,12 @@ const LessonTypesPage: React.FC = () => {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedLessonType, setSelectedLessonType] = useState<LessonType | null>(null);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [showStudentsModal, setShowStudentsModal] = useState(false);
+  const [selectedClass, setSelectedClass] = useState<Class | null>(null);
 
   // Form state
-  const [formData, setFormData] = useState<LessonTypeFormData>({
+  const [formData, setFormData] = useState<ClassFormData>({
     name: '',
     description: '',
     hourlyRate: 0,
@@ -66,7 +71,7 @@ const LessonTypesPage: React.FC = () => {
   }>({});
 
   useEffect(() => {
-    dispatch(fetchLessonTypes());
+    dispatch(fetchClasses());
     
     // Fetch teachers if user is admin
     if (user?.role === 'admin') {
@@ -116,21 +121,15 @@ const LessonTypesPage: React.FC = () => {
     } = {};
 
     if (!formData.name.trim()) {
-      errors.name = 'Lesson type name is required';
-    } else if (formData.name.length > 100) {
-      errors.name = 'Name cannot exceed 100 characters';
-    }
-
-    if (formData.description && formData.description.length > 500) {
-      errors.description = 'Description cannot exceed 500 characters';
+      errors.name = 'Class name is required';
     }
 
     if (formData.hourlyRate <= 0) {
       errors.hourlyRate = 'Hourly rate must be greater than 0';
     }
 
-    if (!['DZD', 'USD', 'EUR', 'GBP'].includes(formData.currency)) {
-      errors.currency = 'Please select a valid currency';
+    if (!formData.currency.trim()) {
+      errors.currency = 'Currency is required';
     }
 
     if (user?.role === 'admin' && !formData.teacherId) {
@@ -141,11 +140,11 @@ const LessonTypesPage: React.FC = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleCreateLessonType = async () => {
+  const handleCreateClass = async () => {
     if (!validateForm()) return;
 
     try {
-      await dispatch(createLessonType({
+      await dispatch(createClass({
         teacherId: formData.teacherId || user?.id || '',
         name: formData.name.trim(),
         description: formData.description.trim(),
@@ -157,19 +156,16 @@ const LessonTypesPage: React.FC = () => {
       setShowCreateModal(false);
       resetForm();
     } catch (error) {
-      console.error('Failed to create lesson type:', error);
+      console.error('Failed to create class:', error);
     }
   };
 
-  const handleEditLessonType = async () => {
-    if (!selectedLessonType || !validateForm()) return;
+  const handleEditClass = async () => {
+    if (!selectedClass || !validateForm()) return;
 
     try {
-      // Refresh lesson types list before updating to ensure we have the latest data
-      await dispatch(fetchLessonTypes()).unwrap();
-      
-      await dispatch(updateLessonType({
-        id: selectedLessonType._id,
+      await dispatch(updateClass({
+        id: selectedClass._id,
         data: {
           name: formData.name.trim(),
           description: formData.description.trim(),
@@ -180,44 +176,54 @@ const LessonTypesPage: React.FC = () => {
       })).unwrap();
 
       setShowEditModal(false);
-      setSelectedLessonType(null);
+      setSelectedClass(null);
       resetForm();
     } catch (error) {
-      console.error('Failed to update lesson type:', error);
+      console.error('Failed to update class:', error);
     }
   };
 
-  const handleDeleteLessonType = async () => {
-    if (!selectedLessonType) return;
+  const handleDeleteClass = async () => {
+    if (!selectedClass) return;
 
     try {
-      await dispatch(deleteLessonType(selectedLessonType._id)).unwrap();
+      await dispatch(deleteClass(selectedClass._id)).unwrap();
       setShowDeleteModal(false);
-      setSelectedLessonType(null);
+      setSelectedClass(null);
     } catch (error) {
-      console.error('Failed to delete lesson type:', error);
+      console.error('Failed to delete class:', error);
     }
   };
 
-  const openEditModal = (lessonType: LessonType) => {
-    setSelectedLessonType(lessonType);
+  const openEditModal = (classItem: Class) => {
+    setSelectedClass(classItem);
     setFormData({
-      name: lessonType.name,
-      description: lessonType.description || '',
-      hourlyRate: lessonType.hourlyRate,
-      currency: lessonType.currency,
-      isActive: lessonType.isActive,
-      teacherId: lessonType.teacherId._id
+      name: classItem.name,
+      description: classItem.description || '',
+      hourlyRate: classItem.hourlyRate,
+      currency: classItem.currency,
+      isActive: classItem.isActive,
+      teacherId: classItem.teacherId._id
     });
     setShowEditModal(true);
   };
 
-  const openDeleteModal = (lessonType: LessonType) => {
-    setSelectedLessonType(lessonType);
+  const openDeleteModal = (classItem: Class) => {
+    setSelectedClass(classItem);
     setShowDeleteModal(true);
   };
 
-  const handleFormChange = (field: keyof LessonTypeFormData, value: string | number | boolean) => {
+  const openAssignModal = (classItem: Class) => {
+    setSelectedClass(classItem);
+    setShowAssignModal(true);
+  };
+
+  const openStudentsModal = (classItem: Class) => {
+    setSelectedClass(classItem);
+    setShowStudentsModal(true);
+  };
+
+  const handleFormChange = (field: keyof ClassFormData, value: string | number | boolean) => {
     setFormData(prev => ({ ...prev, [field]: value }));
     // Clear error for this field when user starts typing
     if (field !== 'isActive' && formErrors[field as keyof typeof formErrors]) {
@@ -225,10 +231,15 @@ const LessonTypesPage: React.FC = () => {
     }
   };
 
-  // Filter lesson types by selected teacher (for admins)
-  const filteredLessonTypes = user?.role === 'admin' && selectedTeacherFilter
-    ? lessonTypes.filter(lessonType => lessonType.teacherId._id === selectedTeacherFilter)
-    : lessonTypes;
+  const handleAssignmentSuccess = () => {
+    // Refresh classes data
+    dispatch(fetchClasses());
+  };
+
+  // Filter classes by selected teacher (for admins)
+  const filteredClasses = user?.role === 'admin' && selectedTeacherFilter
+    ? classes.filter(classItem => classItem.teacherId._id === selectedTeacherFilter)
+    : classes;
 
   if (isLoading) {
     return (
@@ -245,12 +256,12 @@ const LessonTypesPage: React.FC = () => {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">
-              {user?.role === 'admin' ? 'Manage Lesson Types' : 'Lesson Types'}
+              {user?.role === 'admin' ? 'Manage Classes' : 'Classes'}
             </h1>
             <p className="text-gray-600 mt-1">
               {user?.role === 'admin' 
-                ? 'Manage lesson types and hourly rates for all teachers'
-                : 'Manage your lesson types and hourly rates'
+                ? 'Manage classes and hourly rates for all teachers'
+                : 'Manage your classes and hourly rates'
               }
             </p>
           </div>
@@ -262,7 +273,7 @@ const LessonTypesPage: React.FC = () => {
             className="btn btn-primary"
           >
             <Plus className="w-4 h-4 mr-2" />
-            Add Lesson Type
+            Add Class
           </button>
         </div>
       </div>
@@ -308,31 +319,31 @@ const LessonTypesPage: React.FC = () => {
         </div>
       )}
 
-      {/* Lesson Types Content */}
+      {/* Classes Content */}
       <div className="card">
         <div className="card-header">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">
               {selectedTeacherFilter 
-                ? `Lesson Types for ${teachers.find(t => t._id === selectedTeacherFilter)?.profile.firstName} ${teachers.find(t => t._id === selectedTeacherFilter)?.profile.lastName}`
-                : user?.role === 'admin' ? 'All Lesson Types' : 'Your Lesson Types'
+                ? `Classes for ${teachers.find(t => t._id === selectedTeacherFilter)?.profile.firstName} ${teachers.find(t => t._id === selectedTeacherFilter)?.profile.lastName}`
+                : user?.role === 'admin' ? 'All Classes' : 'Your Classes'
               }
             </h2>
-            <span className="text-sm text-gray-500">{filteredLessonTypes.length} total</span>
+            <span className="text-sm text-gray-500">{filteredClasses.length} total</span>
           </div>
         </div>
 
         <div className="overflow-x-auto">
-          {filteredLessonTypes.length === 0 ? (
+          {filteredClasses.length === 0 ? (
             <div className="text-center py-12">
               <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">
-                {selectedTeacherFilter ? 'No lesson types found for selected teacher' : 'No lesson types yet'}
+                {selectedTeacherFilter ? 'No classes found for selected teacher' : 'No classes yet'}
               </h3>
               <p className="text-gray-600 mb-6">
                 {selectedTeacherFilter 
-                  ? 'The selected teacher has no lesson types created yet.' 
-                  : 'Get started by creating your first lesson type'
+                  ? 'The selected teacher has no classes created yet.' 
+                  : 'Get started by creating your first class'
                 }
               </p>
               {!selectedTeacherFilter && (
@@ -344,7 +355,7 @@ const LessonTypesPage: React.FC = () => {
                   className="btn btn-primary"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Create Lesson Type
+                  Create Class
                 </button>
               )}
             </div>
@@ -364,58 +375,76 @@ const LessonTypesPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="table-body">
-                {filteredLessonTypes.map((lessonType) => (
-                  <tr key={lessonType._id} className={!lessonType.isActive ? 'opacity-60' : ''}>
+                {filteredClasses.map((classItem) => (
+                  <tr key={classItem._id} className={!classItem.isActive ? 'opacity-60' : ''}>
                     <td className="table-cell">
-                      <div className="font-medium text-gray-900">{lessonType.name}</div>
+                      <div className="font-medium text-gray-900">{classItem.name}</div>
                     </td>
                     <td className="table-cell">
                       <div className="text-sm text-gray-600 max-w-xs truncate">
-                        {lessonType.description || 'No description'}
+                        {classItem.description || 'No description'}
                       </div>
                     </td>
                     {user?.role === 'admin' && (
                       <td className="table-cell">
                         <div className="text-sm">
                           <div className="font-medium text-gray-900">
-                            {lessonType.teacherId.profile.firstName} {lessonType.teacherId.profile.lastName}
+                            {classItem.teacherId.profile.firstName} {classItem.teacherId.profile.lastName}
                           </div>
-                          <div className="text-gray-500 text-xs">{lessonType.teacherId.email}</div>
+                          <div className="text-gray-500 text-xs">{classItem.teacherId.email}</div>
                         </div>
                       </td>
                     )}
                     <td className="table-cell">
                       <div className="flex items-center gap-1">
                         <span className="font-semibold text-gray-900">
-                          {formatCurrency(lessonType.hourlyRate, lessonType.currency)}
+                          {formatCurrency(classItem.hourlyRate, classItem.currency)}
                         </span>
                       </div>
                     </td>
                     <td className="table-cell">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        lessonType.isActive
+                        classItem.isActive
                           ? 'bg-green-100 text-green-800'
                           : 'bg-gray-100 text-gray-800'
                       }`}>
-                        {lessonType.isActive ? 'Active' : 'Inactive'}
+                        {classItem.isActive ? 'Active' : 'Inactive'}
                       </span>
                     </td>
                     <td className="table-cell">
                       <span className="text-sm text-gray-500">
-                        {new Date(lessonType.createdAt).toLocaleDateString()}
+                        {new Date(classItem.createdAt).toLocaleDateString()}
                       </span>
                     </td>
                     <td className="table-cell">
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => openEditModal(lessonType)}
+                          onClick={() => openStudentsModal(classItem)}
+                          className="btn btn-secondary btn-sm flex items-center"
+                          title="View students"
+                        >
+                          <Users className="w-3 h-3 mr-1" />
+                          Students
+                        </button>
+                        {user?.role === 'admin' && (
+                          <button
+                            onClick={() => openAssignModal(classItem)}
+                            className="btn btn-primary btn-sm flex items-center"
+                            title="Assign students"
+                          >
+                            <UserPlus className="w-3 h-3 mr-1" />
+                            Assign
+                          </button>
+                        )}
+                        <button
+                          onClick={() => openEditModal(classItem)}
                           className="btn btn-secondary btn-sm flex items-center"
                         >
                           <Edit className="w-3 h-3 mr-1" />
                           Edit
                         </button>
                         <button
-                          onClick={() => openDeleteModal(lessonType)}
+                          onClick={() => openDeleteModal(classItem)}
                           className="btn btn-danger btn-sm flex items-center"
                         >
                           <Trash2 className="w-3 h-3 mr-1" />
@@ -433,24 +462,18 @@ const LessonTypesPage: React.FC = () => {
 
       {/* Create/Edit Modal */}
       {(showCreateModal || showEditModal) && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto border w-full max-w-2xl shadow-lg rounded-md bg-white">
+            <div className="inline-block h-full w-full align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden transform transition-all">
               <div className="flex items-center justify-between pb-4 mb-4 border-b border-gray-200">
                 <h3 className="text-lg font-medium text-gray-900">
-                  {showCreateModal ? 'Create Lesson Type' : 'Edit Lesson Type'}
+                  {showCreateModal ? 'Create Class' : 'Edit Class'}
                 </h3>
                 <button
                   onClick={() => {
                     setShowCreateModal(false);
                     setShowEditModal(false);
-                    setSelectedLessonType(null);
+                    setSelectedClass(null);
                     resetForm();
                   }}
                   className="text-gray-400 hover:text-gray-500 focus:outline-none"
@@ -462,9 +485,9 @@ const LessonTypesPage: React.FC = () => {
               <form onSubmit={(e) => {
                 e.preventDefault();
                 if (showCreateModal) {
-                  handleCreateLessonType();
+                  handleCreateClass();
                 } else {
-                  handleEditLessonType();
+                  handleEditClass();
                 }
               }}>
                 <div className="space-y-4">
@@ -495,26 +518,26 @@ const LessonTypesPage: React.FC = () => {
                       onChange={(e) => handleFormChange('description', e.target.value)}
                       className={`form-input ${formErrors.description ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
                       rows={3}
-                      placeholder="Brief description of the lesson type..."
+                      placeholder="Brief description of the class..."
                     />
                     {formErrors.description && (
                       <p className="form-error">{formErrors.description}</p>
                     )}
                   </div>
 
-                  {/* Teacher Selection (Admin only) */}
+                  {/* Teacher (Admin only) */}
                   {user?.role === 'admin' && (
                     <div>
                       <label className="form-label">
                         Teacher *
                       </label>
                       <select
-                        value={formData.teacherId}
+                        value={formData.teacherId || ''}
                         onChange={(e) => handleFormChange('teacherId', e.target.value)}
                         className={`form-input ${formErrors.teacherId ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
                         disabled={teachersLoading}
                       >
-                        <option value="">Select a teacher...</option>
+                        <option value="">Select a teacher</option>
                         {teachers.map((teacher) => (
                           <option key={teacher._id} value={teacher._id}>
                             {teacher.profile.firstName} {teacher.profile.lastName} ({teacher.email})
@@ -524,64 +547,61 @@ const LessonTypesPage: React.FC = () => {
                       {formErrors.teacherId && (
                         <p className="form-error">{formErrors.teacherId}</p>
                       )}
-                      {teachersLoading && (
-                        <p className="text-sm text-gray-500 mt-1">Loading teachers...</p>
-                      )}
                     </div>
                   )}
 
-                  {/* Hourly Rate */}
-                  <div>
-                    <label className="form-label">
-                      Hourly Rate *
-                    </label>
-                    <div className="relative">
+                  {/* Hourly Rate and Currency */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="form-label">
+                        Hourly Rate *
+                      </label>
                       <input
                         type="number"
                         step="0.01"
                         min="0"
                         value={formData.hourlyRate}
                         onChange={(e) => handleFormChange('hourlyRate', parseFloat(e.target.value) || 0)}
-                        className={`form-input pr-12 ${formErrors.hourlyRate ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
+                        className={`form-input ${formErrors.hourlyRate ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
                         placeholder="0.00"
                       />
-                      <div className="absolute inset-y-0 right-0 flex items-center pr-3">
-                        <DollarSign className="w-4 h-4 text-gray-400" />
-                      </div>
+                      {formErrors.hourlyRate && (
+                        <p className="form-error">{formErrors.hourlyRate}</p>
+                      )}
                     </div>
-                    {formErrors.hourlyRate && (
-                      <p className="form-error">{formErrors.hourlyRate}</p>
-                    )}
-                  </div>
 
-                  {/* Currency */}
-                  <div>
-                    <label className="form-label">
-                      Currency *
-                    </label>
-                    <select
-                      value={formData.currency}
-                      onChange={(e) => handleFormChange('currency', e.target.value)}
-                      className={`form-input ${formErrors.currency ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
-                    >
-                      <option value="DZD">DZD - Algerian Dinar</option>
-                    </select>
-                    {formErrors.currency && (
-                      <p className="form-error">{formErrors.currency}</p>
-                    )}
+                    <div>
+                      <label className="form-label">
+                        Currency *
+                      </label>
+                      <select
+                        value={formData.currency}
+                        onChange={(e) => handleFormChange('currency', e.target.value)}
+                        className={`form-input ${formErrors.currency ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
+                      >
+                        <option value="DZD">DZD (Algerian Dinar)</option>
+                        <option value="USD">USD (US Dollar)</option>
+                        <option value="EUR">EUR (Euro)</option>
+                        <option value="GBP">GBP (British Pound)</option>
+                      </select>
+                      {formErrors.currency && (
+                        <p className="form-error">{formErrors.currency}</p>
+                      )}
+                    </div>
                   </div>
 
                   {/* Active Status */}
-                  <div className="flex items-center">
-                    <input
-                      type="checkbox"
-                      id="isActive"
-                      checked={formData.isActive}
-                      onChange={(e) => handleFormChange('isActive', e.target.checked)}
-                      className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
-                    />
-                    <label htmlFor="isActive" className="ml-2 block text-sm text-gray-900">
-                      Active lesson type
+                  <div>
+                    <label className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.isActive}
+                        onChange={(e) => handleFormChange('isActive', e.target.checked)}
+                        className="form-checkbox h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
+                      />
+                      <span className="ml-2 text-sm text-gray-900">
+                        Active class
+                      </span>
                     </label>
                   </div>
                 </div>
@@ -592,7 +612,7 @@ const LessonTypesPage: React.FC = () => {
                     onClick={() => {
                       setShowCreateModal(false);
                       setShowEditModal(false);
-                      setSelectedLessonType(null);
+                      setSelectedClass(null);
                       resetForm();
                     }}
                     className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
@@ -614,36 +634,22 @@ const LessonTypesPage: React.FC = () => {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedLessonType && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 transition-opacity" aria-hidden="true">
-              <div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-            </div>
-
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-            <div className="inline-block align-bottom bg-white rounded-lg px-4 pt-5 pb-4 text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full sm:p-6">
-              <div className="sm:flex sm:items-start">
-                <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                  <AlertCircle className="h-6 w-6 text-red-600" />
-                </div>
-                <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
-                    Delete Lesson Type
-                  </h3>
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-500">
-                      Are you sure you want to delete <span className="font-medium text-gray-900">"{selectedLessonType.name}"</span>? 
-                      This action cannot be undone and may affect related time entries.
-                    </p>
-                  </div>
-                </div>
+      {showDeleteModal && selectedClass && (
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
+          <div className="relative top-20 mx-auto p-5 border w-full max-w-md shadow-lg rounded-md bg-white">
+            <div className="flex items-center justify-center mb-4">
+              <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <AlertCircle className="w-6 h-6 text-red-600" />
               </div>
-              <div className="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-medium text-gray-900 mb-2">Delete Class</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete "{selectedClass.name}"? This action cannot be undone.
+              </p>
+              <div className="flex justify-center space-x-3">
                 <button
-                  type="button"
-                  onClick={handleDeleteLessonType}
+                  onClick={handleDeleteClass}
                   className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-50"
                   disabled={isLoading}
                 >
@@ -653,7 +659,7 @@ const LessonTypesPage: React.FC = () => {
                   type="button"
                   onClick={() => {
                     setShowDeleteModal(false);
-                    setSelectedLessonType(null);
+                    setSelectedClass(null);
                   }}
                   className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 sm:mt-0 sm:w-auto sm:text-sm"
                 >
@@ -664,8 +670,34 @@ const LessonTypesPage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Student Assignment Modal */}
+      {showAssignModal && selectedClass && (
+        <ClassStudentAssignment
+          classItem={selectedClass}
+          isOpen={showAssignModal}
+          onClose={() => {
+            setShowAssignModal(false);
+            setSelectedClass(null);
+          }}
+          onSuccess={handleAssignmentSuccess}
+        />
+      )}
+
+      {/* Students View Modal */}
+      {showStudentsModal && selectedClass && (
+        <ClassStudentsView
+          classItem={selectedClass}
+          isOpen={showStudentsModal}
+          onClose={() => {
+            setShowStudentsModal(false);
+            setSelectedClass(null);
+          }}
+          onStudentRemoved={handleAssignmentSuccess}
+        />
+      )}
     </div>
   );
 };
 
-export default LessonTypesPage;
+export default ClassesPage;

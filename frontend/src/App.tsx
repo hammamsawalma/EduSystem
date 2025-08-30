@@ -17,7 +17,7 @@ import TeacherDashboard from './pages/teacher/TeacherDashboard';
 import StudentList from './pages/teacher/StudentList';
 import TimeTracking from './pages/teacher/TimeTracking';
 import FinancialSummary from './pages/teacher/FinancialSummary';
-import LessonTypesPage from './pages/teacher/LessonTypesPage';
+import ClassesPage from './pages/teacher/ClassesPage';
 import ReportsPage from './pages/teacher/ReportsPage';
 import TeachersPage from './pages/admin/TeachersPage';
 import SystemSettings from './pages/admin/SystemSettings';
@@ -72,10 +72,10 @@ const AppContent: React.FC = () => {
             </AuthGuard>
           } />
           
-          <Route path="/lesson-types" element={
+          <Route path="/classes" element={
             <AuthGuard>
               <DashboardLayout>
-                <LessonTypesPage />
+                <ClassesPage />
               </DashboardLayout>
             </AuthGuard>
           } />

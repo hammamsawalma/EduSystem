@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { Student, CreateStudentData } from '../../../types/student';
+import type { Teacher } from '../../../types/teacher';
+import { teacherService } from '../../../services/teacherService';
 
 interface StudentFormModalProps {
   isOpen: boolean;
@@ -11,32 +13,19 @@ interface StudentFormModalProps {
 }
 
 const defaultStudent: CreateStudentData = {
-  personalInfo: {
-    firstName: '',
-    lastName: '',
-    email: '',
+  firstName: '',
+  lastName: '',
+  primaryPhone: '',
+  secondaryContact: {
+    name: '',
+    relationship: 'parent',
     phone: '',
-    dateOfBirth: '',
-    address: '',
   },
-  parentInfo: {
-    parentName: '',
-    parentEmail: '',
-    parentPhone: '',
-    emergencyContact: '',
-  },
-  academicInfo: {
-    grade: '',
-    subjects: [],
-    learningPreferences: '',
-    specialNeeds: '',
-  },
-  paymentInfo: {
-    paymentMethod: 'cash',
-    paymentSchedule: 'monthly',
-    currentBalance: 0,
-    totalPaid: 0,
-  },
+  email: '',
+  address: '',
+  nationalId: '',
+  level: '',
+  teacherId: '',
   notes: '',
 };
 
@@ -48,33 +37,53 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({
   title,
 }) => {
   const [student, setStudent] = useState<CreateStudentData>(defaultStudent);
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [subjectInput, setSubjectInput] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchTeachers();
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (initialData) {
       setStudent({
-        personalInfo: initialData.personalInfo,
-        parentInfo: initialData.parentInfo,
-        academicInfo: initialData.academicInfo,
-        paymentInfo: initialData.paymentInfo,
+        firstName: initialData.firstName,
+        lastName: initialData.lastName,
+        primaryPhone: initialData.primaryPhone,
+        secondaryContact: initialData.secondaryContact,
+        email: initialData.email,
+        address: initialData.address,
+        nationalId: initialData.nationalId,
+        level: initialData.level,
+        teacherId: typeof initialData.teacherId === 'string' ? initialData.teacherId : initialData.teacherId._id,
         notes: initialData.notes || '',
       });
     } else {
       setStudent(defaultStudent);
     }
     setErrors({});
-    setSubjectInput('');
   }, [initialData, isOpen]);
 
-  const handlePersonalInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const fetchTeachers = async () => {
+    try {
+      setIsLoading(true);
+      const teachersData = await teacherService.getTeachers();
+      setTeachers(teachersData);
+    } catch (error) {
+      console.error('Failed to fetch teachers:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setStudent((prev) => ({
       ...prev,
-      personalInfo: {
-        ...prev.personalInfo,
-        [name]: value,
-      },
+      [name]: value,
     }));
 
     if (errors[name]) {
@@ -85,58 +94,13 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({
     }
   };
 
-  const handleParentInfoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleSecondaryContactChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setStudent((prev) => ({
       ...prev,
-      parentInfo: {
-        ...prev.parentInfo,
+      secondaryContact: {
+        ...prev.secondaryContact,
         [name]: value,
-      },
-    }));
-  };
-
-  const handleAcademicInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setStudent((prev) => ({
-      ...prev,
-      academicInfo: {
-        ...prev.academicInfo,
-        [name]: value,
-      },
-    }));
-  };
-
-  const handlePaymentInfoChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setStudent((prev) => ({
-      ...prev,
-      paymentInfo: {
-        ...prev.paymentInfo,
-        [name]: name === 'currentBalance' || name === 'totalPaid' ? parseFloat(value) || 0 : value,
-      },
-    }));
-  };
-
-  const handleAddSubject = () => {
-    if (subjectInput.trim() && !student.academicInfo?.subjects?.includes(subjectInput.trim())) {
-      setStudent((prev) => ({
-        ...prev,
-        academicInfo: {
-          ...prev.academicInfo,
-          subjects: [...(prev.academicInfo?.subjects || []), subjectInput.trim()],
-        },
-      }));
-      setSubjectInput('');
-    }
-  };
-
-  const handleRemoveSubject = (subject: string) => {
-    setStudent((prev) => ({
-      ...prev,
-      academicInfo: {
-        ...prev.academicInfo,
-        subjects: prev.academicInfo?.subjects?.filter(s => s !== subject) || [],
       },
     }));
   };
@@ -144,20 +108,46 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!student.personalInfo.firstName) {
+    if (!student.firstName.trim()) {
       newErrors.firstName = 'First name is required';
     }
 
-    if (!student.personalInfo.lastName) {
+    if (!student.lastName.trim()) {
       newErrors.lastName = 'Last name is required';
     }
 
-    if (student.personalInfo.email && !/\S+@\S+\.\S+/.test(student.personalInfo.email)) {
+    if (!student.primaryPhone.trim()) {
+      newErrors.primaryPhone = 'Primary phone is required';
+    }
+
+    if (!student.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/\S+@\S+\.\S+/.test(student.email)) {
       newErrors.email = 'Please enter a valid email address';
     }
 
-    if (student.parentInfo?.parentEmail && !/\S+@\S+\.\S+/.test(student.parentInfo.parentEmail)) {
-      newErrors.parentEmail = 'Please enter a valid parent email address';
+    if (!student.address.trim()) {
+      newErrors.address = 'Address is required';
+    }
+
+    if (!student.nationalId.trim()) {
+      newErrors.nationalId = 'National ID is required';
+    }
+
+    if (!student.level.trim()) {
+      newErrors.level = 'Level is required';
+    }
+
+    if (!student.teacherId) {
+      newErrors.teacherId = 'Teacher assignment is required';
+    }
+
+    if (!student.secondaryContact.name.trim()) {
+      newErrors.secondaryContactName = 'Secondary contact name is required';
+    }
+
+    if (!student.secondaryContact.phone.trim()) {
+      newErrors.secondaryContactPhone = 'Secondary contact phone is required';
     }
 
     setErrors(newErrors);
@@ -188,9 +178,9 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({
         
         <form onSubmit={handleSubmit} className="px-6 py-4">
           <div className="space-y-6">
-            {/* Personal Information */}
+            {/* Basic Information */}
             <div>
-              <h4 className="text-lg font-medium text-gray-900 mb-4">Personal Information</h4>
+              <h4 className="text-lg font-medium text-gray-900 mb-4">Basic Information</h4>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label htmlFor="firstName" className="block text-sm font-medium text-gray-700">
@@ -200,8 +190,8 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({
                     type="text"
                     id="firstName"
                     name="firstName"
-                    value={student.personalInfo.firstName}
-                    onChange={handlePersonalInfoChange}
+                    value={student.firstName}
+                    onChange={handleInputChange}
                     className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
                       errors.firstName ? 'border-red-300' : ''
                     }`}
@@ -219,8 +209,8 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({
                     type="text"
                     id="lastName"
                     name="lastName"
-                    value={student.personalInfo.lastName}
-                    onChange={handlePersonalInfoChange}
+                    value={student.lastName}
+                    onChange={handleInputChange}
                     className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
                       errors.lastName ? 'border-red-300' : ''
                     }`}
@@ -229,17 +219,17 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({
                     <p className="mt-1 text-sm text-red-600">{errors.lastName}</p>
                   )}
                 </div>
-                
+
                 <div>
                   <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                    Email
+                    Email *
                   </label>
                   <input
                     type="email"
                     id="email"
                     name="email"
-                    value={student.personalInfo.email || ''}
-                    onChange={handlePersonalInfoChange}
+                    value={student.email}
+                    onChange={handleInputChange}
                     className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
                       errors.email ? 'border-red-300' : ''
                     }`}
@@ -248,316 +238,212 @@ const StudentFormModal: React.FC<StudentFormModalProps> = ({
                     <p className="mt-1 text-sm text-red-600">{errors.email}</p>
                   )}
                 </div>
-                
-                <div>
-                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
-                    Phone
-                  </label>
-                  <input
-                    type="text"
-                    id="phone"
-                    name="phone"
-                    value={student.personalInfo.phone || ''}
-                    onChange={handlePersonalInfoChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">
-                    Date of Birth
-                  </label>
-                  <input
-                    type="date"
-                    id="dateOfBirth"
-                    name="dateOfBirth"
-                    value={student.personalInfo.dateOfBirth || ''}
-                    onChange={handlePersonalInfoChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                  />
-                </div>
-                
-                <div className="col-span-2">
-                  <label htmlFor="address" className="block text-sm font-medium text-gray-700">
-                    Address
-                  </label>
-                  <input
-                    type="text"
-                    id="address"
-                    name="address"
-                    value={student.personalInfo.address || ''}
-                    onChange={handlePersonalInfoChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                  />
-                </div>
-              </div>
-            </div>
 
-            {/* Parent Information */}
-            <div>
-              <h4 className="text-lg font-medium text-gray-900 mb-4">Parent/Guardian Information</h4>
-              <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="parentName" className="block text-sm font-medium text-gray-700">
-                    Parent/Guardian Name
+                  <label htmlFor="primaryPhone" className="block text-sm font-medium text-gray-700">
+                    Primary Phone *
                   </label>
                   <input
-                    type="text"
-                    id="parentName"
-                    name="parentName"
-                    value={student.parentInfo?.parentName || ''}
-                    onChange={handleParentInfoChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="parentEmail" className="block text-sm font-medium text-gray-700">
-                    Parent Email
-                  </label>
-                  <input
-                    type="email"
-                    id="parentEmail"
-                    name="parentEmail"
-                    value={student.parentInfo?.parentEmail || ''}
-                    onChange={handleParentInfoChange}
+                    type="tel"
+                    id="primaryPhone"
+                    name="primaryPhone"
+                    value={student.primaryPhone}
+                    onChange={handleInputChange}
                     className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
-                      errors.parentEmail ? 'border-red-300' : ''
+                      errors.primaryPhone ? 'border-red-300' : ''
                     }`}
                   />
-                  {errors.parentEmail && (
-                    <p className="mt-1 text-sm text-red-600">{errors.parentEmail}</p>
+                  {errors.primaryPhone && (
+                    <p className="mt-1 text-sm text-red-600">{errors.primaryPhone}</p>
                   )}
                 </div>
-                
+
                 <div>
-                  <label htmlFor="parentPhone" className="block text-sm font-medium text-gray-700">
-                    Parent Phone
+                  <label htmlFor="nationalId" className="block text-sm font-medium text-gray-700">
+                    National ID *
                   </label>
                   <input
                     type="text"
-                    id="parentPhone"
-                    name="parentPhone"
-                    value={student.parentInfo?.parentPhone || ''}
-                    onChange={handleParentInfoChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    id="nationalId"
+                    name="nationalId"
+                    value={student.nationalId}
+                    onChange={handleInputChange}
+                    className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
+                      errors.nationalId ? 'border-red-300' : ''
+                    }`}
                   />
+                  {errors.nationalId && (
+                    <p className="mt-1 text-sm text-red-600">{errors.nationalId}</p>
+                  )}
                 </div>
-                
+
                 <div>
-                  <label htmlFor="emergencyContact" className="block text-sm font-medium text-gray-700">
-                    Emergency Contact
+                  <label htmlFor="level" className="block text-sm font-medium text-gray-700">
+                    Level *
                   </label>
                   <input
                     type="text"
-                    id="emergencyContact"
-                    name="emergencyContact"
-                    value={student.parentInfo?.emergencyContact || ''}
-                    onChange={handleParentInfoChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                    id="level"
+                    name="level"
+                    value={student.level}
+                    onChange={handleInputChange}
+                    className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
+                      errors.level ? 'border-red-300' : ''
+                    }`}
                   />
+                  {errors.level && (
+                    <p className="mt-1 text-sm text-red-600">{errors.level}</p>
+                  )}
                 </div>
+              </div>
+
+              <div className="mt-4">
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                  Address *
+                </label>
+                <textarea
+                  id="address"
+                  name="address"
+                  rows={3}
+                  value={student.address}
+                  onChange={handleInputChange}
+                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
+                    errors.address ? 'border-red-300' : ''
+                  }`}
+                />
+                {errors.address && (
+                  <p className="mt-1 text-sm text-red-600">{errors.address}</p>
+                )}
               </div>
             </div>
 
             {/* Academic Information */}
             <div>
               <h4 className="text-lg font-medium text-gray-900 mb-4">Academic Information</h4>
-              <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="teacherId" className="block text-sm font-medium text-gray-700">
+                  Assigned Teacher *
+                </label>
+                <select
+                  id="teacherId"
+                  name="teacherId"
+                  value={student.teacherId}
+                  onChange={handleInputChange}
+                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
+                    errors.teacherId ? 'border-red-300' : ''
+                  }`}
+                  disabled={isLoading}
+                >
+                  <option value="">Select a teacher...</option>
+                  {teachers.map((teacher) => (
+                    <option key={teacher._id} value={teacher._id}>
+                      {teacher.profile.firstName} {teacher.profile.lastName}
+                    </option>
+                  ))}
+                </select>
+                {errors.teacherId && (
+                  <p className="mt-1 text-sm text-red-600">{errors.teacherId}</p>
+                )}
+              </div>
+            </div>
+
+            {/* Secondary Contact Information */}
+            <div>
+              <h4 className="text-lg font-medium text-gray-900 mb-4">Secondary Contact</h4>
+              <div className="grid grid-cols-3 gap-4">
                 <div>
-                  <label htmlFor="grade" className="block text-sm font-medium text-gray-700">
-                    Grade
+                  <label htmlFor="name" className="block text-sm font-medium text-gray-700">
+                    Contact Name *
                   </label>
-                  <select
-                    id="grade"
-                    name="grade"
-                    value={student.academicInfo?.grade || ''}
-                    onChange={handleAcademicInfoChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                  >
-                    <option className='text-gray-500' value="">Select Grade</option>
-                    <option value="A1">A1</option>
-                    <option value="A2">A2</option>
-                    <option value="B1">B1</option>
-                    <option value="B2">B2</option>
-                    <option value="C1">C1</option>
-                    <option value="C2">C2</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">
-                    Subjects
-                  </label>
-                  <div className="mt-1 flex">
-                    <input
-                      type="text"
-                      value={subjectInput}
-                      onChange={(e) => setSubjectInput(e.target.value)}
-                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSubject())}
-                      placeholder="Add subject..."
-                      className="flex-1 rounded-l-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                    />
-                    <button
-                      type="button"
-                      onClick={handleAddSubject}
-                      className="px-3 py-2 border border-l-0 border-gray-300 rounded-r-md bg-gray-50 text-gray-700 hover:bg-gray-100"
-                    >
-                      Add
-                    </button>
-                  </div>
-                  {student.academicInfo?.subjects && student.academicInfo.subjects.length > 0 && (
-                    <div className="mt-2 flex flex-wrap gap-1">
-                      {student.academicInfo.subjects.map((subject, index) => (
-                        <span
-                          key={index}
-                          className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-primary-100 text-primary-800"
-                        >
-                          {subject}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveSubject(subject)}
-                            className="ml-1 text-primary-600 hover:text-primary-800"
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
-                    </div>
+                  <input
+                    type="text"
+                    id="name"
+                    name="name"
+                    value={student.secondaryContact.name}
+                    onChange={handleSecondaryContactChange}
+                    className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
+                      errors.secondaryContactName ? 'border-red-300' : ''
+                    }`}
+                  />
+                  {errors.secondaryContactName && (
+                    <p className="mt-1 text-sm text-red-600">{errors.secondaryContactName}</p>
                   )}
                 </div>
-                
-                <div className="col-span-2">
-                  <label htmlFor="learningPreferences" className="block text-sm font-medium text-gray-700">
-                    Learning Preferences
+
+                <div>
+                  <label htmlFor="relationship" className="block text-sm font-medium text-gray-700">
+                    Relationship *
                   </label>
-                  <textarea
-                    id="learningPreferences"
-                    name="learningPreferences"
-                    rows={2}
-                    value={student.academicInfo?.learningPreferences || ''}
-                    onChange={handleAcademicInfoChange}
+                  <select
+                    id="relationship"
+                    name="relationship"
+                    value={student.secondaryContact.relationship}
+                    onChange={handleSecondaryContactChange}
                     className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                  />
+                  >
+                    <option value="parent">Parent</option>
+                    <option value="sibling">Sibling</option>
+                    <option value="guardian">Guardian</option>
+                    <option value="relative">Relative</option>
+                    <option value="other">Other</option>
+                  </select>
                 </div>
-                
-                <div className="col-span-2">
-                  <label htmlFor="specialNeeds" className="block text-sm font-medium text-gray-700">
-                    Special Needs
+
+                <div>
+                  <label htmlFor="phone" className="block text-sm font-medium text-gray-700">
+                    Contact Phone *
                   </label>
-                  <textarea
-                    id="specialNeeds"
-                    name="specialNeeds"
-                    rows={2}
-                    value={student.academicInfo?.specialNeeds || ''}
-                    onChange={handleAcademicInfoChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  <input
+                    type="tel"
+                    id="phone"
+                    name="phone"
+                    value={student.secondaryContact.phone}
+                    onChange={handleSecondaryContactChange}
+                    className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
+                      errors.secondaryContactPhone ? 'border-red-300' : ''
+                    }`}
                   />
+                  {errors.secondaryContactPhone && (
+                    <p className="mt-1 text-sm text-red-600">{errors.secondaryContactPhone}</p>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Payment Information */}
+            {/* Additional Information */}
             <div>
-              <h4 className="text-lg font-medium text-gray-900 mb-4">Payment Information</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label htmlFor="paymentMethod" className="block text-sm font-medium text-gray-700">
-                    Payment Method
-                  </label>
-                  <select
-                    id="paymentMethod"
-                    name="paymentMethod"
-                    value={student.paymentInfo?.paymentMethod || 'cash'}
-                    onChange={handlePaymentInfoChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="check">Check</option>
-                    <option value="bank_transfer">Bank Transfer</option>
-                    <option value="online">Online</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label htmlFor="paymentSchedule" className="block text-sm font-medium text-gray-700">
-                    Payment Schedule
-                  </label>
-                  <select
-                    id="paymentSchedule"
-                    name="paymentSchedule"
-                    value={student.paymentInfo?.paymentSchedule || 'monthly'}
-                    onChange={handlePaymentInfoChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                  >
-                    <option value="weekly">Weekly</option>
-                    <option value="monthly">Monthly</option>
-                    <option value="quarterly">Quarterly</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label htmlFor="currentBalance" className="block text-sm font-medium text-gray-700">
-                    Current Balance (DA)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    id="currentBalance"
-                    name="currentBalance"
-                    value={student.paymentInfo?.currentBalance || 0}
-                    onChange={handlePaymentInfoChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                  />
-                </div>
-                
-                <div>
-                  <label htmlFor="totalPaid" className="block text-sm font-medium text-gray-700">
-                    Total Paid (DA)
-                  </label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    id="totalPaid"
-                    name="totalPaid"
-                    value={student.paymentInfo?.totalPaid || 0}
-                    onChange={handlePaymentInfoChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                  />
-                </div>
+              <h4 className="text-lg font-medium text-gray-900 mb-4">Additional Information</h4>
+              <div>
+                <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
+                  Notes
+                </label>
+                <textarea
+                  id="notes"
+                  name="notes"
+                  rows={4}
+                  value={student.notes || ''}
+                  onChange={handleInputChange}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                  placeholder="Any additional notes or information about the student..."
+                />
               </div>
-            </div>
-
-            {/* Notes */}
-            <div>
-              <label htmlFor="notes" className="block text-sm font-medium text-gray-700">
-                Notes
-              </label>
-              <textarea
-                id="notes"
-                name="notes"
-                rows={3}
-                value={student.notes || ''}
-                onChange={(e) => setStudent(prev => ({ ...prev, notes: e.target.value }))}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
-                placeholder="Additional notes about the student..."
-              />
             </div>
           </div>
-          
-          <div className="mt-6 flex justify-end space-x-3">
+
+          {/* Form Actions */}
+          <div className="flex justify-end space-x-3 pt-6 border-t">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="px-4 py-2 text-sm font-medium text-white bg-primary-600 border border-transparent rounded-md shadow-sm hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
             >
-              Save Student
+              {initialData ? 'Update Student' : 'Create Student'}
             </button>
           </div>
         </form>

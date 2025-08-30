@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Student = require('../models/Student');
 const User = require('../models/User');
+const Class = require('../models/Class');
 const { logAuditEntry } = require('../middleware/audit');
 
 // Get all students for a teacher
@@ -28,11 +29,12 @@ const getStudents = async (req, res) => {
     if (req.query.search) {
       const searchRegex = new RegExp(req.query.search, 'i');
       query.$or = [
-        { 'personalInfo.firstName': searchRegex },
-        { 'personalInfo.lastName': searchRegex },
-        { 'personalInfo.email': searchRegex },
-        { 'parentInfo.parentName': searchRegex },
-        { 'parentInfo.parentEmail': searchRegex }
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { email: searchRegex },
+        { 'secondaryContact.name': searchRegex },
+        { level: searchRegex },
+        { nationalId: searchRegex }
       ];
     }
     
@@ -51,7 +53,7 @@ const getStudents = async (req, res) => {
     const limit = parseInt(req.query.limit) || 20;
     const skip = (page - 1) * limit;
     
-    const sortBy = req.query.sortBy || 'personalInfo.firstName';
+    const sortBy = req.query.sortBy || 'firstName';
     const sortOrder = req.query.sortOrder === 'desc' ? -1 : 1;
     const sortOptions = {};
     sortOptions[sortBy] = sortOrder;
@@ -100,11 +102,14 @@ const getStudent = async (req, res) => {
     }
 
     // Check if user can access this student
-    if (req.user.role !== 'admin' && student.teacherId._id.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only view your own students.'
-      });
+    if (req.user.role !== 'admin') {
+      // Teachers can only view students assigned to them
+      if (!student.teacherId || student.teacherId._id.toString() !== req.user._id.toString()) {
+        return res.status(403).json({
+          success: false,
+          message: 'Access denied. You can only view students assigned to you.'
+        });
+      }
     }
 
     res.json({
@@ -123,87 +128,97 @@ const getStudent = async (req, res) => {
   }
 };
 
-// Create new student
+// Create new student (Admin only)
 const createStudent = async (req, res) => {
   try {
+    // Only admins can create students
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only administrators can create students.'
+      });
+    }
+
     const {
-      personalInfo,
-      parentInfo,
-      academicInfo,
-      paymentInfo,
+      firstName,
+      lastName,
+      primaryPhone,
+      secondaryContact,
+      email,
+      address,
+      nationalId,
+      level,
+      teacherId,
       notes,
       enrollmentDate
     } = req.body;
 
     // Validate required fields
-    if (!personalInfo || !personalInfo.firstName || !personalInfo.lastName) {
+    if (!firstName || !lastName || !primaryPhone || !email || !address || !nationalId || !level || !teacherId) {
       return res.status(400).json({
         success: false,
-        message: 'First name and last name are required.'
+        message: 'All required fields must be provided: firstName, lastName, primaryPhone, email, address, nationalId, level, and teacherId.'
       });
     }
 
-    // Validate email format if provided
-    if (personalInfo.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalInfo.email)) {
+    // Validate secondary contact
+    if (!secondaryContact || !secondaryContact.name || !secondaryContact.phone || !secondaryContact.relationship) {
+      return res.status(400).json({
+        success: false,
+        message: 'Secondary contact information is required (name, phone, relationship).'
+      });
+    }
+
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({
         success: false,
         message: 'Please enter a valid email address.'
       });
     }
 
-    // Validate parent email format if provided
-    if (parentInfo?.parentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentInfo.parentEmail)) {
+    // Validate teacher exists
+    const teacher = await User.findOne({ _id: teacherId, role: 'teacher' });
+    if (!teacher) {
       return res.status(400).json({
         success: false,
-        message: 'Please enter a valid parent email address.'
+        message: 'Invalid teacher assignment.'
       });
     }
 
-    // Check for duplicate email within teacher's students
-    if (personalInfo.email) {
-      const existingStudent = await Student.findOne({
-        teacherId: req.user._id,
-        'personalInfo.email': personalInfo.email.toLowerCase()
+    // Check for duplicate email globally
+    const existingEmailStudent = await Student.findOne({ email: email.toLowerCase() });
+    if (existingEmailStudent) {
+      return res.status(409).json({
+        success: false,
+        message: 'A student with this email already exists.'
       });
-      
-      if (existingStudent) {
-        return res.status(409).json({
-          success: false,
-          message: 'A student with this email already exists.'
-        });
-      }
+    }
+
+    // Check for duplicate national ID globally
+    const existingNationalIdStudent = await Student.findOne({ nationalId: nationalId.trim() });
+    if (existingNationalIdStudent) {
+      return res.status(409).json({
+        success: false,
+        message: 'A student with this national ID already exists.'
+      });
     }
 
     // Create student
     const student = new Student({
-      teacherId: req.user._id,
-      personalInfo: {
-        firstName: personalInfo.firstName.trim(),
-        lastName: personalInfo.lastName.trim(),
-        email: personalInfo.email?.toLowerCase().trim(),
-        phone: personalInfo.phone?.trim(),
-        dateOfBirth: personalInfo.dateOfBirth ? new Date(personalInfo.dateOfBirth) : undefined,
-        address: personalInfo.address?.trim()
+      teacherId,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      primaryPhone: primaryPhone.trim(),
+      secondaryContact: {
+        name: secondaryContact.name.trim(),
+        relationship: secondaryContact.relationship,
+        phone: secondaryContact.phone.trim()
       },
-      parentInfo: parentInfo ? {
-        parentName: parentInfo.parentName?.trim(),
-        parentEmail: parentInfo.parentEmail?.toLowerCase().trim(),
-        parentPhone: parentInfo.parentPhone?.trim(),
-        emergencyContact: parentInfo.emergencyContact?.trim()
-      } : {},
-      academicInfo: academicInfo ? {
-        grade: academicInfo.grade?.trim(),
-        subjects: academicInfo.subjects || [],
-        learningPreferences: academicInfo.learningPreferences?.trim(),
-        specialNeeds: academicInfo.specialNeeds?.trim()
-      } : {},
-      paymentInfo: paymentInfo ? {
-        paymentMethod: paymentInfo.paymentMethod || 'cash',
-        billingAddress: paymentInfo.billingAddress?.trim(),
-        paymentSchedule: paymentInfo.paymentSchedule || 'per_session',
-        currentBalance: paymentInfo.currentBalance || 0,
-        totalPaid: paymentInfo.totalPaid || 0
-      } : {},
+      email: email.toLowerCase().trim(),
+      address: address.trim(),
+      nationalId: nationalId.trim(),
+      level: level.trim(),
       notes: notes?.trim(),
       enrollmentDate: enrollmentDate ? new Date(enrollmentDate) : new Date()
     });
@@ -230,9 +245,17 @@ const createStudent = async (req, res) => {
   }
 };
 
-// Update student
+// Update student (Admin only)
 const updateStudent = async (req, res) => {
   try {
+    // Only admins can update students
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only administrators can update students.'
+      });
+    }
+
     const student = await Student.findById(req.params.id);
 
     if (!student) {
@@ -242,46 +265,45 @@ const updateStudent = async (req, res) => {
       });
     }
 
-    // Check if user can update this student
-    if (req.user.role !== 'admin' && student.teacherId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only update your own students.'
-      });
-    }
-
     const {
-      personalInfo,
-      parentInfo,
-      academicInfo,
-      paymentInfo,
+      firstName,
+      lastName,
+      primaryPhone,
+      secondaryContact,
+      email,
+      address,
+      nationalId,
+      level,
+      teacherId,
       notes,
       status,
       enrollmentDate
     } = req.body;
 
     // Validate email format if provided
-    if (personalInfo?.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(personalInfo.email)) {
+    if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({
         success: false,
         message: 'Please enter a valid email address.'
       });
     }
 
-    // Validate parent email format if provided
-    if (parentInfo?.parentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(parentInfo.parentEmail)) {
-      return res.status(400).json({
-        success: false,
-        message: 'Please enter a valid parent email address.'
-      });
+    // Validate teacher exists if provided
+    if (teacherId) {
+      const teacher = await User.findOne({ _id: teacherId, role: 'teacher' });
+      if (!teacher) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid teacher assignment.'
+        });
+      }
     }
 
-    // Check for duplicate email within teacher's students (excluding current student)
-    if (personalInfo?.email) {
+    // Check for duplicate email globally (excluding current student)
+    if (email) {
       const existingStudent = await Student.findOne({
         _id: { $ne: student._id },
-        teacherId: req.user._id,
-        'personalInfo.email': personalInfo.email.toLowerCase()
+        email: email.toLowerCase()
       });
       
       if (existingStudent) {
@@ -292,45 +314,40 @@ const updateStudent = async (req, res) => {
       }
     }
 
-    // Update personal info
-    if (personalInfo) {
-      if (personalInfo.firstName) student.personalInfo.firstName = personalInfo.firstName.trim();
-      if (personalInfo.lastName) student.personalInfo.lastName = personalInfo.lastName.trim();
-      if (personalInfo.email !== undefined) student.personalInfo.email = personalInfo.email ? personalInfo.email.toLowerCase().trim() : undefined;
-      if (personalInfo.phone !== undefined) student.personalInfo.phone = personalInfo.phone?.trim();
-      if (personalInfo.dateOfBirth !== undefined) student.personalInfo.dateOfBirth = personalInfo.dateOfBirth ? new Date(personalInfo.dateOfBirth) : undefined;
-      if (personalInfo.address !== undefined) student.personalInfo.address = personalInfo.address?.trim();
+    // Check for duplicate national ID globally (excluding current student)
+    if (nationalId) {
+      const existingStudent = await Student.findOne({
+        _id: { $ne: student._id },
+        nationalId: nationalId.trim()
+      });
+      
+      if (existingStudent) {
+        return res.status(409).json({
+          success: false,
+          message: 'A student with this national ID already exists.'
+        });
+      }
     }
 
-    // Update parent info
-    if (parentInfo) {
-      if (parentInfo.parentName !== undefined) student.parentInfo.parentName = parentInfo.parentName?.trim();
-      if (parentInfo.parentEmail !== undefined) student.parentInfo.parentEmail = parentInfo.parentEmail ? parentInfo.parentEmail.toLowerCase().trim() : undefined;
-      if (parentInfo.parentPhone !== undefined) student.parentInfo.parentPhone = parentInfo.parentPhone?.trim();
-      if (parentInfo.emergencyContact !== undefined) student.parentInfo.emergencyContact = parentInfo.emergencyContact?.trim();
-    }
-
-    // Update academic info
-    if (academicInfo) {
-      if (academicInfo.grade !== undefined) student.academicInfo.grade = academicInfo.grade?.trim();
-      if (academicInfo.subjects !== undefined) student.academicInfo.subjects = academicInfo.subjects || [];
-      if (academicInfo.learningPreferences !== undefined) student.academicInfo.learningPreferences = academicInfo.learningPreferences?.trim();
-      if (academicInfo.specialNeeds !== undefined) student.academicInfo.specialNeeds = academicInfo.specialNeeds?.trim();
-    }
-
-    // Update payment info
-    if (paymentInfo) {
-      if (paymentInfo.paymentMethod !== undefined) student.paymentInfo.paymentMethod = paymentInfo.paymentMethod;
-      if (paymentInfo.billingAddress !== undefined) student.paymentInfo.billingAddress = paymentInfo.billingAddress?.trim();
-      if (paymentInfo.paymentSchedule !== undefined) student.paymentInfo.paymentSchedule = paymentInfo.paymentSchedule;
-      if (paymentInfo.currentBalance !== undefined) student.paymentInfo.currentBalance = paymentInfo.currentBalance;
-      if (paymentInfo.totalPaid !== undefined) student.paymentInfo.totalPaid = paymentInfo.totalPaid;
-    }
-
-    // Update other fields
+    // Update fields if provided
+    if (firstName !== undefined) student.firstName = firstName.trim();
+    if (lastName !== undefined) student.lastName = lastName.trim();
+    if (primaryPhone !== undefined) student.primaryPhone = primaryPhone.trim();
+    if (email !== undefined) student.email = email.toLowerCase().trim();
+    if (address !== undefined) student.address = address.trim();
+    if (nationalId !== undefined) student.nationalId = nationalId.trim();
+    if (level !== undefined) student.level = level.trim();
+    if (teacherId !== undefined) student.teacherId = teacherId;
     if (notes !== undefined) student.notes = notes?.trim();
     if (status !== undefined) student.status = status;
     if (enrollmentDate !== undefined) student.enrollmentDate = new Date(enrollmentDate);
+
+    // Update secondary contact if provided
+    if (secondaryContact) {
+      if (secondaryContact.name !== undefined) student.secondaryContact.name = secondaryContact.name.trim();
+      if (secondaryContact.relationship !== undefined) student.secondaryContact.relationship = secondaryContact.relationship;
+      if (secondaryContact.phone !== undefined) student.secondaryContact.phone = secondaryContact.phone.trim();
+    }
 
     await student.save();
 
@@ -354,23 +371,23 @@ const updateStudent = async (req, res) => {
   }
 };
 
-// Delete student
+// Delete student (Admin only)
 const deleteStudent = async (req, res) => {
   try {
+    // Only admins can delete students
+    if (req.user.role !== 'admin') {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. Only administrators can delete students.'
+      });
+    }
+
     const student = await Student.findById(req.params.id);
 
     if (!student) {
       return res.status(404).json({
         success: false,
         message: 'Student not found.'
-      });
-    }
-
-    // Check if user can delete this student
-    if (req.user.role !== 'admin' && student.teacherId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only delete your own students.'
       });
     }
 
@@ -478,6 +495,152 @@ const bulkUpdateStudents = async (req, res) => {
   }
 };
 
+// Assign student to class
+const assignStudentToClass = async (req, res) => {
+  try {
+    const { studentId, classId } = req.body;
+
+    if (!studentId || !classId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Student ID and Class ID are required.'
+      });
+    }
+
+    // Find the student
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found.'
+      });
+    }
+
+    // Find the class and verify it belongs to the teacher
+    const classItem = await Class.findById(classId);
+    if (!classItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Class not found.'
+      });
+    }
+
+    // Check if user can assign students to this class
+    if (req.user.role !== 'admin' && classItem.teacherId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only assign students to your own classes.'
+      });
+    }
+
+    // Check if student is already assigned to this class
+    const existingAssignment = student.assignedClasses.find(
+      assignment => assignment.classId.toString() === classId
+    );
+
+    if (existingAssignment) {
+      return res.status(409).json({
+        success: false,
+        message: 'Student is already assigned to this class.'
+      });
+    }
+
+    // Add class assignment
+    student.assignedClasses.push({
+      classId: classId,
+      assignedAt: new Date(),
+      assignedBy: req.user._id
+    });
+
+    await student.save();
+
+    // Populate for response
+    await student.populate('assignedClasses.classId', 'name teacherId hourlyRate currency');
+    await student.populate('teacherId', 'profile.firstName profile.lastName email');
+
+    res.json({
+      success: true,
+      message: 'Student assigned to class successfully.',
+      data: {
+        student
+      }
+    });
+  } catch (error) {
+    console.error('Assign student to class error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to assign student to class.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Remove student from class
+const removeStudentFromClass = async (req, res) => {
+  try {
+    const { studentId, classId } = req.body;
+
+    if (!studentId || !classId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Student ID and Class ID are required.'
+      });
+    }
+
+    // Find the student
+    const student = await Student.findById(studentId);
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found.'
+      });
+    }
+
+    // Find the class and verify it belongs to the teacher
+    const classItem = await Class.findById(classId);
+    if (!classItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Class not found.'
+      });
+    }
+
+    // Check if user can remove students from this class
+    if (req.user.role !== 'admin' && classItem.teacherId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only remove students from your own classes.'
+      });
+    }
+
+    // Remove class assignment
+    student.assignedClasses = student.assignedClasses.filter(
+      assignment => assignment.classId.toString() !== classId
+    );
+
+    await student.save();
+
+    // Populate for response
+    await student.populate('assignedClasses.classId', 'name teacherId hourlyRate currency');
+    await student.populate('teacherId', 'profile.firstName profile.lastName email');
+
+    res.json({
+      success: true,
+      message: 'Student removed from class successfully.',
+      data: {
+        student
+      }
+    });
+  } catch (error) {
+    console.error('Remove student from class error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to remove student from class.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   getStudents,
   getStudent,
@@ -485,5 +648,7 @@ module.exports = {
   updateStudent,
   deleteStudent,
   getStudentStats,
-  bulkUpdateStudents
+  bulkUpdateStudents,
+  assignStudentToClass,
+  removeStudentFromClass
 };

@@ -240,7 +240,6 @@ const exportAttendance = async (req, res) => {
       'Attendance ID': record._id,
       'Student': record.studentId ? `${record.studentId.personalInfo.firstName} ${record.studentId.personalInfo.lastName}` : 'Unknown',
       'Lesson Date': exportUtils.formatDate(record.lessonDate),
-      'Lesson Type': record.lessonType,
       'Status': record.status,
       'Duration (minutes)': record.duration || 0,
       'Late Minutes': record.lateMinutes || 0,
@@ -333,7 +332,6 @@ const exportTimeEntries = async (req, res) => {
 
     // Get time entries data
     const timeEntries = await TimeEntry.find(query)
-      .populate('lessonTypeId', 'name')
       .populate('studentId', 'personalInfo.firstName personalInfo.lastName')
       .select('-__v')
       .lean();
@@ -342,7 +340,6 @@ const exportTimeEntries = async (req, res) => {
     const exportData = timeEntries.map(entry => ({
       'Entry ID': entry._id,
       'Date': exportUtils.formatDate(entry.date),
-      'Lesson Type': entry.lessonTypeId ? entry.lessonTypeId.name : 'Unknown',
       'Student': entry.studentId ? `${entry.studentId.personalInfo.firstName} ${entry.studentId.personalInfo.lastName}` : '',
       'Hours Worked': entry.hoursWorked,
       'Hourly Rate': exportUtils.formatCurrency(entry.hourlyRate, entry.currency),

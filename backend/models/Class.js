@@ -1,6 +1,6 @@
 const mongoose = require('mongoose');
 
-const lessonTypeSchema = new mongoose.Schema({
+const classSchema = new mongoose.Schema({
   teacherId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -8,9 +8,9 @@ const lessonTypeSchema = new mongoose.Schema({
   },
   name: {
     type: String,
-    required: [true, 'Lesson type name is required'],
+    required: [true, 'Class name is required'],
     trim: true,
-    maxlength: [100, 'Lesson type name cannot exceed 100 characters']
+    maxlength: [100, 'Class name cannot exceed 100 characters']
   },
   description: {
     type: String,
@@ -49,21 +49,21 @@ const lessonTypeSchema = new mongoose.Schema({
 });
 
 // Indexes for performance
-lessonTypeSchema.index({ teacherId: 1, isActive: 1 });
-lessonTypeSchema.index({ teacherId: 1, name: 1 }, { unique: true });
+classSchema.index({ teacherId: 1, isActive: 1 });
+classSchema.index({ teacherId: 1, name: 1 }, { unique: true });
 
-// Ensure a teacher cannot have duplicate lesson type names
-lessonTypeSchema.pre('save', async function(next) {
+// Ensure a teacher cannot have duplicate class names
+classSchema.pre('save', async function(next) {
   if (this.isNew || this.isModified('name')) {
-    const existingLessonType = await this.constructor.findOne({
+    const existingClass = await this.constructor.findOne({
       teacherId: this.teacherId,
       name: { $regex: new RegExp(`^${this.name}$`, 'i') },
       _id: { $ne: this._id }
     });
 
-    if (existingLessonType) {
-      const error = new Error('Lesson type name already exists for this teacher');
-      error.code = 'DUPLICATE_LESSON_TYPE';
+    if (existingClass) {
+      const error = new Error('Class name already exists for this teacher');
+      error.code = 'DUPLICATE_CLASS';
       return next(error);
     }
   }
@@ -71,8 +71,8 @@ lessonTypeSchema.pre('save', async function(next) {
 });
 
 // Virtual for formatted rate
-lessonTypeSchema.virtual('formattedRate').get(function() {
+classSchema.virtual('formattedRate').get(function() {
   return `${this.currency} ${this.hourlyRate.toFixed(2)}`;
 });
 
-module.exports = mongoose.model('LessonType', lessonTypeSchema);
+module.exports = mongoose.model('Class', classSchema);

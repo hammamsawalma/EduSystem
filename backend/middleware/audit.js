@@ -50,8 +50,6 @@ const logAuditEntry = async (req, action, targetType, responseData) => {
         const parsed = JSON.parse(responseData);
         if (parsed.data && parsed.data.user && parsed.data.user.id) {
           logData.targetId = parsed.data.user.id;
-        } else if (parsed.data && parsed.data.lessonType && parsed.data.lessonType._id) {
-          logData.targetId = parsed.data.lessonType._id;
         } else if (parsed.data && parsed.data.timeEntry && parsed.data.timeEntry._id) {
           logData.targetId = parsed.data.timeEntry._id;
         } else if (parsed.data && parsed.data.student && parsed.data.student._id) {
@@ -117,10 +115,12 @@ const auditLoggers = {
   timeEntryUpdate: auditLogger('Time entry updated', 'timeentry'),
   timeEntryDelete: auditLogger('Time entry deleted', 'timeentry'),
 
-  // Lesson type actions
-  lessonTypeCreate: auditLogger('Lesson type created', 'lessontype'),
-  lessonTypeUpdate: auditLogger('Lesson type updated', 'lessontype'),
-  lessonTypeDelete: auditLogger('Lesson type deleted', 'lessontype'),
+  // Class actions
+  classCreate: auditLogger('Class created', 'class'),
+  classUpdate: auditLogger('Class updated', 'class'),
+  classDelete: auditLogger('Class deleted', 'class'),
+  classAssignStudents: auditLogger('Students assigned to class', 'class'),
+  classRemoveStudent: auditLogger('Student removed from class', 'class'),
 
   // Student actions
   studentCreate: auditLogger('Student created', 'student'),

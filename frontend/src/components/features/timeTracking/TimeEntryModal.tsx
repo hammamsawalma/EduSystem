@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
 import type { CreateTimeEntryData, UpdateTimeEntryData, LessonType } from '../../../types/financial';
-import type { Student } from '../../../types/student';
+import type { Class } from '../../../types/class';
 
 interface TimeEntryModalData {
   _id?: string;
@@ -9,7 +9,7 @@ interface TimeEntryModalData {
   date: string;
   hoursWorked: number;
   description?: string;
-  studentId?: string;
+  classId?: string;
 }
 
 interface TimeEntryModalProps {
@@ -18,7 +18,7 @@ interface TimeEntryModalProps {
   onSubmit: (data: CreateTimeEntryData | UpdateTimeEntryData) => Promise<void>;
   editingEntry: TimeEntryModalData | null;
   lessonTypes: LessonType[];
-  students: Student[];
+  classes: Class[];
 }
 
 const defaultFormData = {
@@ -26,7 +26,7 @@ const defaultFormData = {
   date: new Date().toISOString().split('T')[0],
   hoursWorked: 1,
   description: '',
-  studentId: ''
+  classId: ''
 };
 
 const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
@@ -35,7 +35,7 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
   onSubmit,
   editingEntry,
   lessonTypes,
-  students
+  classes
 }) => {
   const [formData, setFormData] = useState(defaultFormData);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -47,7 +47,7 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
         date: editingEntry.date,
         hoursWorked: editingEntry.hoursWorked,
         description: editingEntry.description || '',
-        studentId: editingEntry.studentId || ''
+        classId: editingEntry.classId || ''
       });
     } else {
       setFormData(defaultFormData);
@@ -82,6 +82,10 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
       newErrors.date = 'Date is required';
     }
 
+    if (!formData.classId) {
+      newErrors.classId = 'Class is required';
+    }
+
     if (formData.hoursWorked <= 0 || formData.hoursWorked > 24) {
       newErrors.hoursWorked = 'Hours must be between 0.25 and 24';
     }
@@ -106,7 +110,7 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
         id: editingEntry._id!,
         hoursWorked: formData.hoursWorked,
         description: formData.description,
-        studentId: formData.studentId || undefined
+        classId: formData.classId || undefined
       } as UpdateTimeEntryData);
     } else {
       await onSubmit({
@@ -114,7 +118,7 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
         date: formData.date,
         hoursWorked: formData.hoursWorked,
         description: formData.description,
-        studentId: formData.studentId || undefined
+        classId: formData.classId
       } as CreateTimeEntryData);
     }
   };
@@ -215,23 +219,27 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
             </div>
 
             <div>
-              <label htmlFor="studentId" className="block text-sm font-medium text-gray-700">
-                Student (Optional)
+              <label htmlFor="classId" className="block text-sm font-medium text-gray-700">
+                Class *
               </label>
               <select
-                id="studentId"
-                name="studentId"
-                value={formData.studentId}
+                id="classId"
+                name="classId"
+                value={formData.classId}
                 onChange={handleChange}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm"
+                required
               >
-                <option value="">No specific student</option>
-                {students.map((student) => (
-                  <option key={student._id} value={student._id}>
-                    {student.personalInfo?.firstName} {student.personalInfo?.lastName}
+                <option value="">Select a class</option>
+                {classes.map((classItem) => (
+                  <option key={classItem._id} value={classItem._id}>
+                    {classItem.name}
                   </option>
                 ))}
               </select>
+              {errors.classId && (
+                <p className="mt-1 text-sm text-red-600">{errors.classId}</p>
+              )}
             </div>
 
             <div>

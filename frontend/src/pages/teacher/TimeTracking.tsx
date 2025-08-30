@@ -19,7 +19,7 @@ import {
   fetchLessonTypes,
   clearError,
 } from "../../store/slices/financialSlice";
-import { fetchStudents } from "../../store/slices/studentsSlice";
+import { fetchClasses } from "../../store/slices/classesSlice";
 import TimeEntryModal from "../../components/features/timeTracking/TimeEntryModal";
 import { formatCurrency as formatCurrencyUtil } from "../../utils/currency";
 import type {
@@ -33,14 +33,14 @@ interface TimeEntryModalData {
   date: string;
   hoursWorked: number;
   description?: string;
-  studentId?: string;
+  classId?: string;
 }
 
 const TimeTracking: React.FC = () => {
   const dispatch = useAppDispatch();
   const { timeEntries, lessonTypes, earningsSummary, isLoading, error } =
     useAppSelector((state) => state.financial);
-  const { students } = useAppSelector((state) => state.students);
+  const { classes } = useAppSelector((state) => state.classes);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<TimeEntryModalData | null>(
@@ -87,7 +87,7 @@ const TimeTracking: React.FC = () => {
   useEffect(() => {
     dispatch(fetchTimeEntries(filters));
     dispatch(fetchLessonTypes());
-    dispatch(fetchStudents({}));
+    dispatch(fetchClasses());
     dispatch(
       fetchEarningsSummary({
         startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1)
@@ -192,7 +192,7 @@ const TimeTracking: React.FC = () => {
       date: entry.date.split("T")[0],
       hoursWorked: entry.hoursWorked,
       description: entry.description || "",
-      studentId: entry.studentId?._id || entry.studentId?.id || "",
+      classId: entry.classId?._id || "",
     });
     setIsModalOpen(true);
   };
@@ -378,7 +378,7 @@ const TimeTracking: React.FC = () => {
                   <tr>
                     <th className="table-header-cell">Date</th>
                     <th className="table-header-cell">Lesson Type</th>
-                    <th className="table-header-cell">Student</th>
+                    <th className="table-header-cell">Class</th>
                     <th className="table-header-cell">Hours</th>
                     <th className="table-header-cell">Rate</th>
                     <th className="table-header-cell">Total</th>
@@ -391,10 +391,7 @@ const TimeTracking: React.FC = () => {
                       <td className="table-cell">{formatDate(entry.date)}</td>
                       <td className="table-cell">{entry.lessonTypeId?.name}</td>
                       <td className="table-cell">
-                        {entry.studentId
-                          ? entry.studentId.fullName || 
-                            `${entry.studentId.personalInfo?.firstName || ''} ${entry.studentId.personalInfo?.lastName || ''}`.trim()
-                          : "N/A"}
+                        {entry.classId?.name || "N/A"}
                       </td>
                       <td className="table-cell">{entry.hoursWorked}</td>
                       <td className="table-cell">
@@ -443,7 +440,7 @@ const TimeTracking: React.FC = () => {
           onSubmit={handleModalSubmit}
           editingEntry={editingEntry}
           lessonTypes={lessonTypes}
-          students={students}
+          classes={classes}
         />
     </>
   );

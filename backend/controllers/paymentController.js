@@ -72,7 +72,7 @@ const getPayments = async (req, res) => {
     const payments = await Payment.find(query)
       .populate('studentId', 'personalInfo.firstName personalInfo.lastName personalInfo.email')
       .populate('teacherId', 'profile.firstName profile.lastName email')
-      .populate('relatedAttendance', 'lessonDate lessonType status')
+      .populate('relatedAttendance', 'lessonDate status')
       .sort(sortOptions)
       .skip(skip)
       .limit(limit);
@@ -107,7 +107,7 @@ const getPayment = async (req, res) => {
     const payment = await Payment.findById(req.params.id)
       .populate('studentId', 'personalInfo.firstName personalInfo.lastName personalInfo.email parentInfo')
       .populate('teacherId', 'profile.firstName profile.lastName email')
-      .populate('relatedAttendance', 'lessonDate lessonType status duration notes');
+      .populate('relatedAttendance', 'lessonDate status duration notes');
 
     if (!payment) {
       return res.status(404).json({
@@ -258,7 +258,7 @@ const createPayment = async (req, res) => {
     await payment.populate([
       { path: 'studentId', select: 'personalInfo.firstName personalInfo.lastName personalInfo.email' },
       { path: 'teacherId', select: 'profile.firstName profile.lastName email' },
-      { path: 'relatedAttendance', select: 'lessonDate lessonType status' }
+      { path: 'relatedAttendance', select: 'lessonDate status' }
     ]);
 
     res.status(201).json({
@@ -371,7 +371,7 @@ const updatePayment = async (req, res) => {
     await payment.populate([
       { path: 'studentId', select: 'personalInfo.firstName personalInfo.lastName personalInfo.email' },
       { path: 'teacherId', select: 'profile.firstName profile.lastName email' },
-      { path: 'relatedAttendance', select: 'lessonDate lessonType status' }
+      { path: 'relatedAttendance', select: 'lessonDate status' }
     ]);
 
     res.json({
@@ -468,7 +468,7 @@ const getStudentPaymentHistory = async (req, res) => {
 
     const payments = await Payment.find(query)
       .populate('teacherId', 'profile.firstName profile.lastName email')
-      .populate('relatedAttendance', 'lessonDate lessonType status')
+      .populate('relatedAttendance', 'lessonDate status')
       .sort({ paymentDate: -1 });
 
     res.json({

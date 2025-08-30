@@ -6,11 +6,6 @@ const timeEntrySchema = new mongoose.Schema({
     ref: 'User',
     required: [true, 'Teacher ID is required']
   },
-  lessonTypeId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'LessonType',
-    required: [true, 'Lesson type is required']
-  },
   date: {
     type: Date,
     required: [true, 'Date is required'],
@@ -54,9 +49,10 @@ const timeEntrySchema = new mongoose.Schema({
     trim: true,
     maxlength: [500, 'Description cannot exceed 500 characters']
   },
-  studentId: {
+  classId: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'Student'
+    ref: 'Class',
+    required: [true, 'Class ID is required']
   },
   editHistory: [{
     previousHours: {
