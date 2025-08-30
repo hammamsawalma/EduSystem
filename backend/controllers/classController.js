@@ -372,7 +372,7 @@ const getClassStudents = async (req, res) => {
 
     const students = await Student.find({ 'assignedClasses.classId': classId })
       .populate('teacherId', 'profile.firstName profile.lastName email')
-      .sort({ 'personalInfo.firstName': 1, 'personalInfo.lastName': 1 });
+      .sort({ firstName: 1, lastName: 1 });
 
     res.json({
       success: true,

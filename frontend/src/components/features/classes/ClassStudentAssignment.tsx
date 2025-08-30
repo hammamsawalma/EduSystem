@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-// import { useAppSelector } from '../../../hooks/redux';
 import classService from '../../../services/classService';
+import api from '../../../services/api';
 import type { Student } from '../../../types/student';
 import type { Class } from '../../../types/class';
 import { Users, X, Check, AlertCircle } from 'lucide-react';
@@ -18,7 +18,6 @@ const ClassStudentAssignment: React.FC<ClassStudentAssignmentProps> = ({
   onClose,
   onSuccess
 }) => {
-  // const { user } = useAppSelector((state) => state.auth);
   const [students, setStudents] = useState<Student[]>([]);
   const [assignedStudents, setAssignedStudents] = useState<Student[]>([]);
   const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
@@ -28,14 +27,19 @@ const ClassStudentAssignment: React.FC<ClassStudentAssignmentProps> = ({
   const fetchStudents = async () => {
     try {
       setIsLoading(true);
-      // We need to implement a service to get teacher's students
-      // For now, this would need to be implemented in the studentService
-      // const teacherStudents = await studentService.getTeacherStudents(classItem.teacherId._id);
-      // setStudents(teacherStudents);
-      setStudents([]); // Placeholder until we implement the service
-    } catch (error) {
+      setError(null);
+      
+      // Fetch students for the teacher who owns this class
+      const response = await api.get(`/students?teacherId=${classItem.teacherId._id}`);
+      
+      if (response.data.success) {
+        setStudents(response.data.data.students);
+      } else {
+        setError('Failed to load students');
+      }
+    } catch (error: any) {
       console.error('Failed to fetch students:', error);
-      setError('Failed to load students');
+      setError(error.response?.data?.message || 'Failed to load students');
     } finally {
       setIsLoading(false);
     }
@@ -45,14 +49,17 @@ const ClassStudentAssignment: React.FC<ClassStudentAssignmentProps> = ({
     try {
       const classStudents = await classService.getClassStudents(classItem._id);
       setAssignedStudents(classStudents);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to fetch assigned students:', error);
+      // Don't set error here as it's not critical for the initial load
     }
   };
 
   // Fetch students for the teacher
   useEffect(() => {
     if (isOpen && classItem) {
+      setSelectedStudentIds([]);
+      setError(null);
       fetchStudents();
       fetchAssignedStudents();
     }
@@ -75,16 +82,25 @@ const ClassStudentAssignment: React.FC<ClassStudentAssignmentProps> = ({
 
     try {
       setIsLoading(true);
+      setError(null);
+      
       await classService.assignStudentsToClass({
         classId: classItem._id,
         studentIds: selectedStudentIds
       });
       
+      // Show success and refresh assigned students
+      await fetchAssignedStudents();
+      setSelectedStudentIds([]);
       onSuccess();
-      onClose();
-    } catch (error) {
+      
+      // Optionally close modal after successful assignment
+      setTimeout(() => {
+        onClose();
+      }, 500);
+    } catch (error: any) {
       console.error('Failed to assign students:', error);
-      setError('Failed to assign students to class');
+      setError(error.response?.data?.message || 'Failed to assign students to class');
     } finally {
       setIsLoading(false);
     }

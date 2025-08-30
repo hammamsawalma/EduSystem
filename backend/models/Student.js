@@ -100,7 +100,24 @@ const studentSchema = new mongoose.Schema({
     type: String,
     trim: true,
     maxlength: [1000, 'Notes cannot exceed 1000 characters']
-  }
+  },
+  // Classes assigned to this student
+  assignedClasses: [{
+    classId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Class',
+      required: true
+    },
+    assignedAt: {
+      type: Date,
+      default: Date.now
+    },
+    assignedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    }
+  }]
 }, {
   timestamps: true
 });
@@ -111,6 +128,7 @@ studentSchema.index({ firstName: 1, lastName: 1 });
 studentSchema.index({ enrollmentDate: -1 });
 studentSchema.index({ email: 1 }, { unique: true });
 studentSchema.index({ nationalId: 1 }, { unique: true });
+studentSchema.index({ 'assignedClasses.classId': 1 });
 
 // Virtual for full name
 studentSchema.virtual('fullName').get(function() {

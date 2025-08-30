@@ -28,12 +28,12 @@ router.put('/:id',
 router.delete('/:id', auditLoggers.classDelete, classController.deleteClass);
 
 // Assign students to class (admin only)
-router.post('/assign-students', authorize(['admin']), auditLoggers.classAssignStudents, classController.assignStudentsToClass);
+router.post('/assign-students', authorize('admin'), auditLoggers.classAssignStudents, classController.assignStudentsToClass);
 
 // Get students assigned to a class
 router.get('/:id/students', classController.getClassStudents);
 
 // Remove student from class (admin only)
-router.delete('/:classId/students/:studentId', authorize(['admin']), auditLoggers.classRemoveStudent, classController.removeStudentFromClass);
+router.delete('/:classId/students/:studentId', authorize('admin'), auditLoggers.classRemoveStudent, classController.removeStudentFromClass);
 
 module.exports = router;
