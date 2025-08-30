@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { X } from 'lucide-react';
-import type { CreateTimeEntryData, UpdateTimeEntryData, LessonType } from '../../../types/financial';
+import type { CreateTimeEntryData, UpdateTimeEntryData } from '../../../types/financial';
 import type { Class } from '../../../types/class';
 
 interface TimeEntryModalData {
   _id?: string;
-  lessonTypeId: string;
   date: string;
   hoursWorked: number;
   description?: string;
@@ -17,12 +16,10 @@ interface TimeEntryModalProps {
   onClose: () => void;
   onSubmit: (data: CreateTimeEntryData | UpdateTimeEntryData) => Promise<void>;
   editingEntry: TimeEntryModalData | null;
-  lessonTypes: LessonType[];
   classes: Class[];
 }
 
 const defaultFormData = {
-  lessonTypeId: '',
   date: new Date().toISOString().split('T')[0],
   hoursWorked: 1,
   description: '',
@@ -34,7 +31,6 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
   onClose,
   onSubmit,
   editingEntry,
-  lessonTypes,
   classes
 }) => {
   const [formData, setFormData] = useState(defaultFormData);
@@ -43,7 +39,6 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
   useEffect(() => {
     if (editingEntry) {
       setFormData({
-        lessonTypeId: editingEntry.lessonTypeId,
         date: editingEntry.date,
         hoursWorked: editingEntry.hoursWorked,
         description: editingEntry.description || '',
@@ -74,8 +69,8 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.lessonTypeId) {
-      newErrors.lessonTypeId = 'Lesson type is required';
+    if (!formData.classId) {
+      newErrors.classId = 'Class is required';
     }
 
     if (!formData.date) {
@@ -114,7 +109,6 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
       } as UpdateTimeEntryData);
     } else {
       await onSubmit({
-        lessonTypeId: formData.lessonTypeId,
         date: formData.date,
         hoursWorked: formData.hoursWorked,
         description: formData.description,
@@ -142,34 +136,6 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
         
         <form onSubmit={handleSubmit} className="px-6 py-4">
           <div className="space-y-4">
-            {!editingEntry && (
-              <div>
-                <label htmlFor="lessonTypeId" className="block text-sm font-medium text-gray-700">
-                  Lesson Type
-                </label>
-                <select
-                  id="lessonTypeId"
-                  name="lessonTypeId"
-                  value={formData.lessonTypeId}
-                  onChange={handleChange}
-                  className={`mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm ${
-                    errors.lessonTypeId ? 'border-red-300' : ''
-                  }`}
-                  required
-                >
-                  <option value="">Select a lesson type</option>
-                  {lessonTypes.map((type) => (
-                    <option key={type._id} value={type._id}>
-                      {type.name} - ${type.hourlyRate}/{type.currency}
-                    </option>
-                  ))}
-                </select>
-                {errors.lessonTypeId && (
-                  <p className="mt-1 text-sm text-red-600">{errors.lessonTypeId}</p>
-                )}
-              </div>
-            )}
-
             <div className="grid grid-cols-2 gap-4">
               {!editingEntry && (
                 <div>

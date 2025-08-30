@@ -16,7 +16,6 @@ import {
   updateTimeEntry,
   deleteTimeEntry,
   fetchEarningsSummary,
-  fetchLessonTypes,
   clearError,
 } from "../../store/slices/financialSlice";
 import { fetchClasses } from "../../store/slices/classesSlice";
@@ -25,11 +24,11 @@ import { formatCurrency as formatCurrencyUtil } from "../../utils/currency";
 import type {
   CreateTimeEntryData,
   UpdateTimeEntryData,
+  TimeEntry,
 } from "../../types/financial";
 
 interface TimeEntryModalData {
   _id?: string;
-  lessonTypeId: string;
   date: string;
   hoursWorked: number;
   description?: string;
@@ -38,7 +37,7 @@ interface TimeEntryModalData {
 
 const TimeTracking: React.FC = () => {
   const dispatch = useAppDispatch();
-  const { timeEntries, lessonTypes, earningsSummary, isLoading, error } =
+  const { timeEntries, earningsSummary, isLoading, error } =
     useAppSelector((state) => state.financial);
   const { classes } = useAppSelector((state) => state.classes);
 
@@ -50,7 +49,6 @@ const TimeTracking: React.FC = () => {
   const [filters, setFilters] = useState({
     startDate: "",
     endDate: "",
-    lessonTypeId: "",
     page: 1,
   });
 
@@ -86,7 +84,6 @@ const TimeTracking: React.FC = () => {
 
   useEffect(() => {
     dispatch(fetchTimeEntries(filters));
-    dispatch(fetchLessonTypes());
     dispatch(fetchClasses());
     dispatch(
       fetchEarningsSummary({
@@ -185,10 +182,9 @@ const TimeTracking: React.FC = () => {
     }
   };
 
-  const openEditModal = (entry: any) => {
+  const openEditModal = (entry: TimeEntry) => {
     setEditingEntry({
       _id: entry._id,
-      lessonTypeId: entry.lessonTypeId._id,
       date: entry.date.split("T")[0],
       hoursWorked: entry.hoursWorked,
       description: entry.description || "",
@@ -265,7 +261,7 @@ const TimeTracking: React.FC = () => {
         {showFilters && (
           <div className="card">
             <div className="card-body">
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Start Date
@@ -291,25 +287,6 @@ const TimeTracking: React.FC = () => {
                     }
                     className="input"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Lesson Type
-                  </label>
-                  <select
-                    value={filters.lessonTypeId}
-                    onChange={(e) =>
-                      handleFilterChange("lessonTypeId", e.target.value)
-                    }
-                    className="input"
-                  >
-                    <option value="">All Types</option>
-                    {lessonTypes.map((type) => (
-                      <option key={type._id} value={type._id}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
                 </div>
               </div>
             </div>
@@ -377,7 +354,6 @@ const TimeTracking: React.FC = () => {
                 <thead className="table-header">
                   <tr>
                     <th className="table-header-cell">Date</th>
-                    <th className="table-header-cell">Lesson Type</th>
                     <th className="table-header-cell">Class</th>
                     <th className="table-header-cell">Hours</th>
                     <th className="table-header-cell">Rate</th>
@@ -389,7 +365,6 @@ const TimeTracking: React.FC = () => {
                   {timeEntries.map((entry) => (
                     <tr key={entry._id}>
                       <td className="table-cell">{formatDate(entry.date)}</td>
-                      <td className="table-cell">{entry.lessonTypeId?.name}</td>
                       <td className="table-cell">
                         {entry.classId?.name || "N/A"}
                       </td>
@@ -439,7 +414,6 @@ const TimeTracking: React.FC = () => {
           }}
           onSubmit={handleModalSubmit}
           editingEntry={editingEntry}
-          lessonTypes={lessonTypes}
           classes={classes}
         />
     </>

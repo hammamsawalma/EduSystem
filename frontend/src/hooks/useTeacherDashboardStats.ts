@@ -14,7 +14,7 @@ interface TeacherDashboardStats {
 
 interface RecentTimeEntry {
   id: string;
-  lessonType: string;
+  className: string;
   hours: number;
   amount: number;
   date: string;

@@ -1,38 +1,4 @@
-export interface LessonType {
-  _id: string;
-  teacherId: {
-    profile: {
-      firstName: string;
-      lastName: string;
-    };
-    _id: string;
-    email: string;
-  };
-  name: string;
-  description?: string;
-  hourlyRate: number;
-  currency: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
 
-export interface CreateLessonTypeData {
-  teacherId: string;
-  name: string;
-  description?: string;
-  hourlyRate: number;
-  currency: string;
-  isActive: boolean;
-}
-
-export interface UpdateLessonTypeData {
-  name?: string;
-  description?: string;
-  hourlyRate?: number;
-  currency?: string;
-  isActive?: boolean;
-}
 
 export interface TimeEntry {
   _id: string;
@@ -43,13 +9,6 @@ export interface TimeEntry {
     };
     _id: string;
     email: string;
-  };
-  lessonTypeId: {
-    _id: string;
-    name: string;
-    description?: string;
-    hourlyRate: number;
-    currency: string;
   };
   date: string;
   hoursWorked: number;
@@ -75,7 +34,6 @@ export interface TimeEntry {
 }
 
 export interface CreateTimeEntryData {
-  lessonTypeId: string;
   date: string;
   hoursWorked: number;
   description?: string;
@@ -83,7 +41,7 @@ export interface CreateTimeEntryData {
 }
 
 export interface UpdateTimeEntryData {
-  lessonTypeId?: string;
+  id: string;
   date?: string;
   hoursWorked?: number;
   description?: string;
@@ -204,7 +162,7 @@ export interface Payment {
   relatedAttendance?: {
     _id: string;
     lessonDate: string;
-    lessonType: string;
+    className: string;
     status: string;
     isPresent: boolean;
     wasLate: boolean;
@@ -246,7 +204,7 @@ export interface EarningsReport {
   totalEarnings: number;
   totalHours: number;
   averageRate: number;
-  byLessonType: {
+  byClass: {
     name: string;
     hours: number;
     earnings: number;
@@ -280,7 +238,7 @@ export interface EarningsSummary {
 
 export interface EarningsBreakdown {
   _id: {
-    lessonTypeId: string;
+    classId: string;
     name: string;
   };
   totalHours: number;

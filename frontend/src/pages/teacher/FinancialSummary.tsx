@@ -463,7 +463,7 @@ const FinancialSummary: React.FC = () => {
               recentEntries.map((entry) => (
                 <div key={entry.id} className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{entry.lessonType}</p>
+                    <p className="text-sm font-medium text-gray-900">{entry.className}</p>
                     <p className="text-xs text-gray-500">{entry.hours} hours • {entry.dateString}</p>
                   </div>
                   <span className="text-sm font-medium text-success-600">+{formatCurrency(entry.amount)}</span>
@@ -549,7 +549,7 @@ const FinancialSummary: React.FC = () => {
           </div>
           <div className="border border-gray-200 rounded-lg p-4">
             <h4 className="font-medium text-gray-900 mb-2">Earnings Summary</h4>
-            <p className="text-sm text-gray-600 mb-4">Detailed earnings breakdown by lesson type</p>
+            <p className="text-sm text-gray-600 mb-4">Detailed earnings breakdown by class</p>
             <div className="flex space-x-2">
               <button 
                 onClick={() => openReportModal('earnings', 'Earnings Summary Report')}

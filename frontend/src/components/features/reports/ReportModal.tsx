@@ -91,7 +91,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
                 <thead className="bg-gray-50">
                   <tr>
                     <th className="px-4 py-2 text-left">Date</th>
-                    <th className="px-4 py-2 text-left">Lesson Type</th>
+                    <th className="px-4 py-2 text-left">Class</th>
                     <th className="px-4 py-2 text-left">Hours</th>
                     <th className="px-4 py-2 text-left">Amount</th>
                   </tr>
@@ -100,7 +100,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
                   {data.timeEntries?.slice(0, 10).map((entry) => (
                     <tr key={entry._id} className="border-t">
                       <td className="px-4 py-2">{formatDate(entry.date)}</td>
-                      <td className="px-4 py-2">{entry.lessonTypeId.name}</td>
+                      <td className="px-4 py-2">{entry.classId.name}</td>
                       <td className="px-4 py-2">{entry.hoursWorked}</td>
                       <td className="px-4 py-2 font-medium">{formatCurrency(entry.totalAmount)}</td>
                     </tr>
@@ -271,15 +271,15 @@ const ReportModal: React.FC<ReportModalProps> = ({
           </div>
         )}
 
-        {/* Earnings Breakdown by Lesson Type */}
+        {/* Earnings Breakdown by Class */}
         <div>
-          <h4 className="text-lg font-semibold text-gray-900 mb-3">Earnings by Lesson Type</h4>
+          <h4 className="text-lg font-semibold text-gray-900 mb-3">Earnings by Class</h4>
           <div className="bg-white border rounded-lg overflow-hidden">
             <div className="max-h-64 overflow-y-auto">
               <table className="w-full text-sm">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-2 text-left">Lesson Type</th>
+                    <th className="px-4 py-2 text-left">Class</th>
                     <th className="px-4 py-2 text-left">Hours</th>
                     <th className="px-4 py-2 text-left">Earnings</th>
                     <th className="px-4 py-2 text-left">Avg. Rate</th>
@@ -288,7 +288,7 @@ const ReportModal: React.FC<ReportModalProps> = ({
                 </thead>
                 <tbody>
                   {breakdown.map((item) => (
-                    <tr key={item._id.lessonTypeId} className="border-t">
+                    <tr key={item._id.classId} className="border-t">
                       <td className="px-4 py-2 font-medium">{item._id.name}</td>
                       <td className="px-4 py-2">{item.totalHours.toFixed(1)}</td>
                       <td className="px-4 py-2 font-medium text-green-600">{formatCurrency(item.totalEarnings)}</td>

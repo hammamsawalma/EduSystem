@@ -8,9 +8,6 @@ import type {
   CreateExpenseData,
   Payment,
   CreatePaymentData,
-  LessonType,
-  CreateLessonTypeData,
-  UpdateLessonTypeData,
   FinancialSummary,
   EarningsSummaryResponse 
 } from '../../types/financial';
@@ -20,7 +17,6 @@ interface FinancialState {
   timeEntries: TimeEntry[];
   expenses: Expense[];
   payments: Payment[];
-  lessonTypes: LessonType[];
   summary: FinancialSummary | null;
   earningsSummary: EarningsSummaryResponse | null;
   pagination: {
@@ -37,7 +33,6 @@ const initialState: FinancialState = {
   timeEntries: [],
   expenses: [],
   payments: [],
-  lessonTypes: [],
   summary: null,
   earningsSummary: null,
   pagination: {
@@ -103,10 +98,11 @@ export const updateTimeEntry = createAsyncThunk(
   'financial/updateTimeEntry',
   async (timeEntryData: UpdateTimeEntryData, { rejectWithValue }) => {
     try {
+      const { id, ...data } = timeEntryData;
       const response = await apiRequest<TimeEntry>(
         'PUT',
-        `/time-entries/${timeEntryData.id}`,
-        timeEntryData
+        `/time-entries/${id}`,
+        data
       );
       
       if (response.success && response.data) {
@@ -136,89 +132,6 @@ export const deleteTimeEntry = createAsyncThunk(
       return rejectWithValue(response.message || 'Failed to delete time entry');
     } catch (error: any) {
       return rejectWithValue(error.message || 'Failed to delete time entry');
-    }
-  }
-);
-
-// Lesson Types
-export const fetchLessonTypes = createAsyncThunk(
-  'financial/fetchLessonTypes',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await apiRequest<{ lessonTypes: LessonType[] }>(
-        'GET',
-        '/lesson-types'
-      );
-      
-      if (response.success && response.data) {
-        return response.data.lessonTypes;
-      }
-      
-      return rejectWithValue(response.message || 'Failed to fetch lesson types');
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to fetch lesson types');
-    }
-  }
-);
-
-export const createLessonType = createAsyncThunk(
-  'financial/createLessonType',
-  async (lessonTypeData: CreateLessonTypeData, { rejectWithValue }) => {
-    try {
-      const response = await apiRequest<LessonType>(
-        'POST',
-        '/lesson-types',
-        lessonTypeData
-      );
-      
-      if (response.success && response.data) {
-        return response.data;
-      }
-      
-      return rejectWithValue(response.message || 'Failed to create lesson type');
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to create lesson type');
-    }
-  }
-);
-
-export const updateLessonType = createAsyncThunk(
-  'financial/updateLessonType',
-  async ({ id, data }: { id: string; data: UpdateLessonTypeData }, { rejectWithValue }) => {
-    try {
-      const response = await apiRequest<LessonType>(
-        'PUT',
-        `/lesson-types/${id}`,
-        data
-      );
-      
-      if (response.success && response.data) {
-        return response.data;
-      }
-      
-      return rejectWithValue(response.message || 'Failed to update lesson type');
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to update lesson type');
-    }
-  }
-);
-
-export const deleteLessonType = createAsyncThunk(
-  'financial/deleteLessonType',
-  async (id: string, { rejectWithValue }) => {
-    try {
-      const response = await apiRequest<{ message: string }>(
-        'DELETE',
-        `/lesson-types/${id}`
-      );
-      
-      if (response.success) {
-        return id;
-      }
-      
-      return rejectWithValue(response.message || 'Failed to delete lesson type');
-    } catch (error: any) {
-      return rejectWithValue(error.message || 'Failed to delete lesson type');
     }
   }
 );
@@ -509,22 +422,6 @@ const financialSlice = createSlice({
       .addCase(deleteTimeEntry.fulfilled, (state, action) => {
         state.timeEntries = state.timeEntries.filter(t => t._id !== action.payload);
         state.pagination.total -= 1;
-      })
-      // Lesson Types
-      .addCase(fetchLessonTypes.fulfilled, (state, action) => {
-        state.lessonTypes = action.payload;
-      })
-      .addCase(createLessonType.fulfilled, (state, action) => {
-        state.lessonTypes.unshift(action.payload);
-      })
-      .addCase(updateLessonType.fulfilled, (state, action) => {
-        const index = state.lessonTypes.findIndex(lt => lt._id === action.payload._id);
-        if (index !== -1) {
-          state.lessonTypes[index] = action.payload;
-        }
-      })
-      .addCase(deleteLessonType.fulfilled, (state, action) => {
-        state.lessonTypes = state.lessonTypes.filter(lt => lt._id !== action.payload);
       })
       // Expenses
       .addCase(fetchExpenses.fulfilled, (state, action) => {

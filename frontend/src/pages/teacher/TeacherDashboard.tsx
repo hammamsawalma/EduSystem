@@ -149,7 +149,7 @@ const TeacherDashboard: React.FC = () => {
               recentEntries.map((entry) => (
                 <div key={entry.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="text-sm font-medium text-gray-900">{entry.lessonType}</p>
+                    <p className="text-sm font-medium text-gray-900">{entry.className}</p>
                     <p className="text-xs text-gray-500">
                       {entry.hours} hours • ${entry.amount}
                     </p>
