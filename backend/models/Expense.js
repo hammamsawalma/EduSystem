@@ -9,8 +9,29 @@ const expenseSchema = new mongoose.Schema({
   category: {
     type: String,
     required: [true, 'Category is required'],
+    enum: [
+      'rent',
+      'utilities',
+      'supplies',
+      'marketing',
+      'maintenance',
+      'insurance',
+      'salaries',
+      'transportation',
+      'communication',
+      'software',
+      'equipment',
+      'training',
+      'legal',
+      'accounting',
+      'other'
+    ],
+    default: 'other'
+  },
+  subcategory: {
+    type: String,
     trim: true,
-    maxlength: [50, 'Category cannot exceed 50 characters']
+    maxlength: [50, 'Subcategory cannot exceed 50 characters']
   },
   amount: {
     type: Number,

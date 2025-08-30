@@ -15,7 +15,8 @@ import {
   TrendingUp,
   FileText,
   Bell,
-  GraduationCap
+  GraduationCap,
+  Calculator
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -44,6 +45,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { name: 'Teachers', href: '/teachers', icon: Users },
     { name: 'Students', href: '/students', icon: BookOpen },
     { name: 'Classes', href: '/classes', icon: GraduationCap },
+    { name: 'Accounting', href: '/accounting', icon: Calculator },
     { name: 'Financial Reports', href: '/financial', icon: TrendingUp },
     { name: 'System Settings', href: '/settings', icon: Settings },
   ];

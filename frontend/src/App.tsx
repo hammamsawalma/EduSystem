@@ -20,6 +20,7 @@ import FinancialSummary from './pages/teacher/FinancialSummary';
 import ClassesPage from './pages/teacher/ClassesPage';
 import ReportsPage from './pages/teacher/ReportsPage';
 import TeachersPage from './pages/admin/TeachersPage';
+import AccountingPage from './pages/admin/AccountingPage';
 import SystemSettings from './pages/admin/SystemSettings';
 
 // Loading component
@@ -109,6 +110,14 @@ const AppContent: React.FC = () => {
             <AuthGuard>
               <DashboardLayout>
                 <TeachersPage />
+              </DashboardLayout>
+            </AuthGuard>
+          } />
+          
+          <Route path="/accounting" element={
+            <AuthGuard>
+              <DashboardLayout>
+                <AccountingPage />
               </DashboardLayout>
             </AuthGuard>
           } />

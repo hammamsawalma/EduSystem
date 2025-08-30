@@ -21,6 +21,8 @@ const paymentRoutes = require('./routes/payments');
 const exportRoutes = require('./routes/exports');
 const dashboardRoutes = require('./routes/dashboard');
 const userRoutes = require('./routes/users');
+const teacherRoutes = require('./routes/teachers');
+const accountingRoutes = require('./routes/accounting');
 
 // Create Express app
 const app = express();
@@ -82,6 +84,8 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/exports', exportRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/users', userRoutes);
+app.use('/api/teachers', teacherRoutes);
+app.use('/api/accounting', accountingRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
