@@ -115,7 +115,6 @@ const getTimeEntry = async (req, res) => {
 const createTimeEntry = async (req, res) => {
   try {
     const {
-      lessonTypeId,
       date,
       hoursWorked,
       description,
@@ -123,27 +122,10 @@ const createTimeEntry = async (req, res) => {
     } = req.body;
 
     // Validate required fields
-    if (!lessonTypeId || !date || !hoursWorked || !classId) {
+    if (!date || !hoursWorked || !classId) {
       return res.status(400).json({
         success: false,
         message: 'Lesson type, date, hours worked, and class are required.'
-      });
-    }
-
-    // Validate lesson type exists and belongs to teacher
-    const lessonType = await LessonType.findById(lessonTypeId);
-    if (!lessonType) {
-      return res.status(404).json({
-        success: false,
-        message: 'Lesson type not found.'
-      });
-    }
-
-    // Check if teacher owns this lesson type (unless admin)
-    if (req.user.role !== 'admin' && lessonType.teacherId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only create time entries for your own lesson types.'
       });
     }
 
@@ -192,12 +174,11 @@ const createTimeEntry = async (req, res) => {
     // Create time entry
     const timeEntry = new TimeEntry({
       teacherId: req.user._id,
-      lessonTypeId,
       date: entryDate,
       hoursWorked: Number(hoursWorked),
-      hourlyRate: lessonType.hourlyRate,
-      totalAmount: Number(hoursWorked) * lessonType.hourlyRate,
-      currency: lessonType.currency,
+      hourlyRate: classData.hourlyRate,
+      totalAmount: Number(hoursWorked) * classData.hourlyRate,
+      currency: classData.currency,
       description: description?.trim(),
       classId: classId
     });
@@ -207,7 +188,6 @@ const createTimeEntry = async (req, res) => {
     // Populate for response
     await timeEntry.populate([
       { path: 'teacherId', select: 'profile.firstName profile.lastName email' },
-      { path: 'lessonTypeId', select: 'name description hourlyRate currency' },
       { path: 'classId', select: 'name description teacherId' }
     ]);
 
