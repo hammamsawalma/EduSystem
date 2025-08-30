@@ -69,6 +69,26 @@ const TimeTracking: React.FC = () => {
       (entry) => new Date(entry.date) >= monthStart
     );
 
+    // Calculate unique classes taught this month
+    const uniqueClasses = new Set(
+      thisMonthEntries
+        .filter(entry => entry.classId?._id)
+        .map(entry => entry.classId!._id)
+    ).size;
+
+    // Calculate average hourly rate
+    const ratesWithCurrency = timeEntries
+      .filter(entry => entry.hourlyRate && entry.currency)
+      .map(entry => ({ rate: entry.hourlyRate, currency: entry.currency }));
+    
+    const avgRate = ratesWithCurrency.length > 0 
+      ? ratesWithCurrency.reduce((sum, item) => sum + item.rate, 0) / ratesWithCurrency.length
+      : 0;
+    
+    const mostCommonCurrency = ratesWithCurrency.length > 0 
+      ? ratesWithCurrency[0].currency 
+      : 'DZD';
+
     return {
       weekHours: thisWeekEntries.reduce(
         (sum, entry) => sum + entry.hoursWorked,
@@ -79,6 +99,9 @@ const TimeTracking: React.FC = () => {
         0
       ),
       totalEntries: timeEntries.length,
+      uniqueClassesThisMonth: uniqueClasses,
+      averageHourlyRate: avgRate,
+      currency: mostCommonCurrency,
     };
   }, [timeEntries]);
 
@@ -211,6 +234,14 @@ const TimeTracking: React.FC = () => {
     return createdAt > fourHoursAgo;
   };
 
+  const getEditHistoryInfo = (entry: TimeEntry) => {
+    if (!entry.editHistory || entry.editHistory.length === 0) {
+      return null;
+    }
+    const lastEdit = entry.editHistory[entry.editHistory.length - 1];
+    return `Last edited: ${formatDate(lastEdit.editedAt)}`;
+  };
+
   return (
     <>
       <div className="space-y-6">
@@ -235,6 +266,14 @@ const TimeTracking: React.FC = () => {
             <p className="text-gray-600">
               Log your teaching hours and track your earnings
             </p>
+            {timeEntries.length > 0 && timeEntries[0].teacherId && (
+              <p className="text-sm text-gray-500 mt-1">
+                Logged as: {timeEntries[0].teacherId.profile.firstName} {timeEntries[0].teacherId.profile.lastName}
+                {timeEntries[0].teacherId.email && (
+                  <span className="ml-2">({timeEntries[0].teacherId.email})</span>
+                )}
+              </p>
+            )}
           </div>
           <div className="flex gap-2">
             <button
@@ -294,7 +333,7 @@ const TimeTracking: React.FC = () => {
         )}
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           <div className="card">
             <div className="flex items-center">
               <Clock className="w-8 h-8 text-primary-600 mr-3" />
@@ -314,9 +353,15 @@ const TimeTracking: React.FC = () => {
                 <p className="text-2xl font-bold text-gray-900">
                   {formatCurrency(
                     earningsSummary?.summary?.totalEarnings ||
-                      stats.monthEarnings
+                      stats.monthEarnings,
+                    stats.currency
                   )}
                 </p>
+                {stats.averageHourlyRate > 0 && (
+                  <p className="text-xs text-gray-500">
+                    Avg: {formatCurrency(stats.averageHourlyRate, stats.currency)}/hr
+                  </p>
+                )}
               </div>
             </div>
           </div>
@@ -327,6 +372,19 @@ const TimeTracking: React.FC = () => {
                 <p className="text-sm text-gray-600">Total Entries</p>
                 <p className="text-2xl font-bold text-gray-900">
                   {stats.totalEntries}
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <div className="flex items-center">
+              <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                <span className="text-purple-600 font-bold text-sm">C</span>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600">Classes This Month</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {stats.uniqueClassesThisMonth}
                 </p>
               </div>
             </div>
@@ -355,6 +413,7 @@ const TimeTracking: React.FC = () => {
                   <tr>
                     <th className="table-header-cell">Date</th>
                     <th className="table-header-cell">Class</th>
+                    <th className="table-header-cell">Description</th>
                     <th className="table-header-cell">Hours</th>
                     <th className="table-header-cell">Rate</th>
                     <th className="table-header-cell">Total</th>
@@ -364,16 +423,51 @@ const TimeTracking: React.FC = () => {
                 <tbody className="table-body">
                   {timeEntries.map((entry) => (
                     <tr key={entry._id}>
-                      <td className="table-cell">{formatDate(entry.date)}</td>
                       <td className="table-cell">
-                        {entry.classId?.name || "N/A"}
-                      </td>
-                      <td className="table-cell">{entry.hoursWorked}</td>
-                      <td className="table-cell">
-                        {formatCurrency(entry.hourlyRate, entry.currency)}
+                        <div>
+                          <div className="font-medium">{formatDate(entry?.date)}</div>
+                        </div>
                       </td>
                       <td className="table-cell">
-                        {formatCurrency(entry.totalAmount, entry.currency)}
+                        <div>
+                          <div className="font-medium">{entry.classId?.name || "N/A"}</div>
+                        </div>
+                      </td>
+                      <td className="table-cell">
+                        <div>
+                          {entry.description ? (
+                            <div className="text-sm text-gray-700 max-w-48 truncate" title={entry.description}>
+                              {entry.description}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 italic">No description</span>
+                          )}
+                          {entry.editHistory && entry.editHistory.length > 0 && (
+                            <div className="text-xs text-orange-500 mt-1" title={getEditHistoryInfo(entry) || ''}>
+                              Edited {entry.editHistory.length} time{entry.editHistory.length > 1 ? 's' : ''}
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="table-cell">
+                        <div className="flex items-center">
+                          <Clock className="w-4 h-4 text-gray-400 mr-1" />
+                          {entry.hoursWorked}h
+                        </div>
+                      </td>
+                      <td className="table-cell">
+                        <div className="text-right">
+                          <div className="font-medium">
+                            {formatCurrency(entry.hourlyRate, entry.currency)}/hr
+                          </div>
+                        </div>
+                      </td>
+                      <td className="table-cell">
+                        <div className="text-right">
+                          <div className="font-medium text-success-600">
+                            {formatCurrency(entry.totalAmount, entry.currency)}
+                          </div>
+                        </div>
                       </td>
                       <td className="table-cell">
                         <div className="flex gap-2">
@@ -394,6 +488,11 @@ const TimeTracking: React.FC = () => {
                                 Delete
                               </button>
                             </>
+                          )}
+                          {!canEdit(entry) && (
+                            <span className="text-xs text-gray-400 italic">
+                              Edit expired
+                            </span>
                           )}
                         </div>
                       </td>

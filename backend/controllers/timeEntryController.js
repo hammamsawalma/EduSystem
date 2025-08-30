@@ -41,7 +41,6 @@ const getTimeEntries = async (req, res) => {
 
     const timeEntries = await TimeEntry.find(query)
       .populate('teacherId', 'profile.firstName profile.lastName email')
-      .populate('lessonTypeId', 'name description hourlyRate currency')
       .populate('classId', 'name description teacherId')
       .sort({ date: -1, createdAt: -1 })
       .skip(skip)
@@ -341,7 +340,6 @@ const updateTimeEntry = async (req, res) => {
     // Populate for response
     await timeEntry.populate([
       { path: 'teacherId', select: 'profile.firstName profile.lastName email' },
-      { path: 'lessonTypeId', select: 'name description hourlyRate currency' },
       { path: 'classId', select: 'name description teacherId' },
       { path: 'editHistory.editedBy', select: 'profile.firstName profile.lastName' }
     ]);
