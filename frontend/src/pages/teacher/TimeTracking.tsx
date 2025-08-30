@@ -21,6 +21,7 @@ import {
 import { fetchClasses } from "../../store/slices/classesSlice";
 import TimeEntryModal from "../../components/features/timeTracking/TimeEntryModal";
 import { formatCurrency as formatCurrencyUtil } from "../../utils/currency";
+import { attendanceService, type CreateAttendanceData } from "../../services/attendanceService";
 import type {
   CreateTimeEntryData,
   UpdateTimeEntryData,
@@ -33,6 +34,11 @@ interface TimeEntryModalData {
   hoursWorked: number;
   description?: string;
   classId?: string;
+}
+
+interface AttendanceRecord {
+  studentId: string;
+  status: 'present' | 'absent';
 }
 
 const TimeTracking: React.FC = () => {
@@ -130,9 +136,34 @@ const TimeTracking: React.FC = () => {
     dispatch(fetchTimeEntries(newFilters));
   };
 
-  const handleCreateEntry = async (data: CreateTimeEntryData) => {
+  const handleCreateEntry = async (data: CreateTimeEntryData, attendance?: AttendanceRecord[]) => {
     try {
-      await dispatch(createTimeEntry(data)).unwrap();
+      const createdEntry = await dispatch(createTimeEntry(data)).unwrap();
+      
+      // If attendance data is provided, create attendance records
+      if (attendance && attendance.length > 0 && createdEntry._id) {
+        const attendancePromises = attendance
+          .filter(record => record.status !== 'absent') // Only create records for present students
+          .map(record => {
+            const attendanceData: CreateAttendanceData = {
+              studentId: record.studentId,
+              timeEntryId: createdEntry._id!,
+              lessonDate: data.date,
+              lessonType: data.description || 'Regular lesson',
+              status: record.status,
+              duration: record.status === 'present' ? data.hoursWorked * 60 : undefined // Convert hours to minutes
+            };
+            return attendanceService.createAttendanceRecord(attendanceData);
+          });
+        
+        try {
+          await Promise.all(attendancePromises);
+        } catch (attendanceError) {
+          console.error('Failed to create some attendance records:', attendanceError);
+          // Note: We don't fail the entire operation if attendance creation fails
+        }
+      }
+      
       setIsModalOpen(false);
       dispatch(
         fetchEarningsSummary({
@@ -174,12 +205,13 @@ const TimeTracking: React.FC = () => {
   };
 
   const handleModalSubmit = async (
-    data: CreateTimeEntryData | UpdateTimeEntryData
+    data: CreateTimeEntryData | UpdateTimeEntryData,
+    attendance?: AttendanceRecord[]
   ) => {
     if (editingEntry) {
       await handleUpdateEntry(data as UpdateTimeEntryData);
     } else {
-      await handleCreateEntry(data as CreateTimeEntryData);
+      await handleCreateEntry(data as CreateTimeEntryData, attendance);
     }
   };
 
