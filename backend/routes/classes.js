@@ -37,33 +37,3 @@ router.get('/:id/students', classController.getClassStudents);
 router.delete('/:classId/students/:studentId', authorize(['admin']), auditLoggers.classRemoveStudent, classController.removeStudentFromClass);
 
 module.exports = router;
-
-// GET /api/classes - Get all classes
-router.get('/', classController.getClasses);
-
-// GET /api/classes/:id - Get single class
-router.get('/:id', classController.getClass);
-
-// POST /api/classes - Create new class
-router.post('/', auditLoggers.classCreate, classController.createClass);
-
-// PUT /api/classes/:id - Update class
-router.put('/:id', 
-  capturePreviousValues('Class'),
-  auditLoggers.classUpdate, 
-  classController.updateClass
-);
-
-// DELETE /api/classes/:id - Delete class
-router.delete('/:id', auditLoggers.classDelete, classController.deleteClass);
-
-// POST /api/classes/assign-students - Assign students to class (admin only)
-router.post('/assign-students', auditLoggers.classAssignStudents, classController.assignStudentsToClass);
-
-// GET /api/classes/:id/students - Get students assigned to class
-router.get('/:id/students', classController.getClassStudents);
-
-// DELETE /api/classes/:classId/students/:studentId - Remove student from class (admin only)
-router.delete('/:classId/students/:studentId', auditLoggers.classRemoveStudent, classController.removeStudentFromClass);
-
-module.exports = router;

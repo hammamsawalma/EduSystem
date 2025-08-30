@@ -27,8 +27,10 @@ export interface ClassStudentsResponse {
 
 export const classService = {
   // Get all classes
-  getClasses: async (teacherId?: string): Promise<Class[]> => {
-    const params = teacherId ? { teacherId } : {};
+  getClasses: async (teacherId?: string, isActive?: boolean): Promise<Class[]> => {
+    const params: any = {};
+    if (teacherId) params.teacherId = teacherId;
+    if (isActive !== undefined) params.isActive = isActive;
     const response = await api.get<ClassesResponse>('/classes', { params });
     return response.data.data.classes;
   },

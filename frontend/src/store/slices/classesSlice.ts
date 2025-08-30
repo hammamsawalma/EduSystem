@@ -18,8 +18,8 @@ const initialState: ClassesState = {
 // Async thunks
 export const fetchClasses = createAsyncThunk(
   'classes/fetchClasses',
-  async (teacherId?: string) => {
-    return await classService.getClasses(teacherId);
+  async (params?: { teacherId?: string; isActive?: boolean }) => {
+    return await classService.getClasses(params?.teacherId, params?.isActive);
   }
 );
 

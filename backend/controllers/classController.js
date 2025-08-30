@@ -6,13 +6,6 @@ const { logAuditEntry } = require('../middleware/audit');
 // Get all classes for a teacher
 const getClasses = async (req, res) => {
   try {
-    if (req.user.role !== 'admin' && classItem.teacherId.toString() !== req.user._id.toString()) {
-      return res.status(403).json({
-        success: false,
-        message: 'Access denied. You can only delete your own classes.'
-      });
-    }
-
     let query = {};
 
     if (req.user.role === 'admin') {
@@ -96,7 +89,8 @@ const createClass = async (req, res) => {
       description,
       hourlyRate,
       currency,
-      teacherId
+      teacherId,
+      isActive
     } = req.body;
 
     // Validate required fields
@@ -131,7 +125,8 @@ const createClass = async (req, res) => {
       name: name.trim(),
       description: description?.trim(),
       hourlyRate: Number(hourlyRate),
-      currency: currency || 'DZD'
+      currency: currency || 'DZD',
+      isActive: isActive !== undefined ? isActive : true
     });
 
     await classItem.save();

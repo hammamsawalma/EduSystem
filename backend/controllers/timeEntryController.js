@@ -1,6 +1,5 @@
 const mongoose = require('mongoose');
 const TimeEntry = require('../models/TimeEntry');
-const LessonType = require('../models/LessonType');
 const Class = require('../models/Class');
 const { logAuditEntry } = require('../middleware/audit');
 
