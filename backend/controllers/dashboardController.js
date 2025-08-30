@@ -16,30 +16,79 @@ exports.getDashboardStats = async (req, res) => {
     const teacherCount = await User.countDocuments({ role: 'teacher' });
     const studentCount = await Student.countDocuments();
     
-    // Get current month data for financial calculations
+    // Get date ranges
     const now = new Date();
+    
+    // Daily range (today)
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    
+    // Weekly range (this week)
+    const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
+    startOfWeek.setHours(0, 0, 0, 0);
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    // Monthly range (this month)
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
     
-    // Calculate monthly revenue from payments
+    // Calculate daily stats
+    const dailyPayments = await Payment.find({
+      paymentDate: { $gte: startOfDay, $lte: endOfDay },
+      status: 'paid'
+    });
+    const dailyTimeEntries = await TimeEntry.find({
+      date: { $gte: startOfDay, $lte: endOfDay }
+    });
+    
+    let dailyRevenue = 0;
+    let dailyHours = 0;
+    dailyPayments.forEach(payment => {
+      dailyRevenue += payment.amount;
+    });
+    dailyTimeEntries.forEach(entry => {
+      if (entry.hoursWorked) {
+        dailyHours += entry.hoursWorked;
+      }
+    });
+    
+    // Calculate weekly stats
+    const weeklyPayments = await Payment.find({
+      paymentDate: { $gte: startOfWeek, $lte: endOfWeek },
+      status: 'paid'
+    });
+    const weeklyTimeEntries = await TimeEntry.find({
+      date: { $gte: startOfWeek, $lte: endOfWeek }
+    });
+    
+    let weeklyRevenue = 0;
+    let weeklyHours = 0;
+    weeklyPayments.forEach(payment => {
+      weeklyRevenue += payment.amount;
+    });
+    weeklyTimeEntries.forEach(entry => {
+      if (entry.hoursWorked) {
+        weeklyHours += entry.hoursWorked;
+      }
+    });
+    
+    // Calculate monthly stats
     const monthlyPayments = await Payment.find({
       paymentDate: { $gte: startOfMonth, $lte: endOfMonth },
       status: 'paid'
     });
-    
-    let monthlyRevenue = 0;
-    monthlyPayments.forEach(payment => {
-      monthlyRevenue += payment.amount;
-    });
-    
-    // Calculate monthly hours from time entries
     const monthlyTimeEntries = await TimeEntry.find({
       date: { $gte: startOfMonth, $lte: endOfMonth }
     });
     
+    let monthlyRevenue = 0;
     let monthlyHours = 0;
+    monthlyPayments.forEach(payment => {
+      monthlyRevenue += payment.amount;
+    });
     monthlyTimeEntries.forEach(entry => {
-      // Add hours from the hoursWorked field (per TimeEntry model)
       if (entry.hoursWorked) {
         monthlyHours += entry.hoursWorked;
       }
@@ -51,6 +100,19 @@ exports.getDashboardStats = async (req, res) => {
       data: {
         totalTeachers: teacherCount,
         totalStudents: studentCount,
+        dailyStats: {
+          revenue: Math.round(dailyRevenue * 100) / 100,
+          hours: Math.round(dailyHours * 100) / 100
+        },
+        weeklyStats: {
+          revenue: Math.round(weeklyRevenue * 100) / 100,
+          hours: Math.round(weeklyHours * 100) / 100
+        },
+        monthlyStats: {
+          revenue: Math.round(monthlyRevenue * 100) / 100,
+          hours: Math.round(monthlyHours * 100) / 100
+        },
+        // Keep legacy fields for backwards compatibility
         monthlyRevenue,
         monthlyHours,
         lastUpdated: new Date()
@@ -173,50 +235,77 @@ exports.getTeacherDashboardStats = async (req, res) => {
     // Get teacher's students count
     const myStudents = await Student.countDocuments({ teacherId });
     
-    // Get current week data
+    // Get date ranges
     const now = new Date();
+    
+    // Daily range (today)
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    
+    // Weekly range (this week)
     const startOfWeek = new Date(now.setDate(now.getDate() - now.getDay()));
     startOfWeek.setHours(0, 0, 0, 0);
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
     
-    // Get current month data
+    // Monthly range (this month)
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
     const endOfMonth = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0, 23, 59, 59);
     
-    // Calculate weekly hours from time entries
+    // Calculate daily stats
+    const dailyTimeEntries = await TimeEntry.find({
+      teacherId,
+      date: { $gte: startOfDay, $lte: endOfDay }
+    });
+    
+    let dailyHours = 0;
+    let dailyEarnings = 0;
+    dailyTimeEntries.forEach(entry => {
+      if (entry.hoursWorked) {
+        dailyHours += entry.hoursWorked;
+      }
+      if (entry.totalAmount) {
+        dailyEarnings += entry.totalAmount;
+      }
+    });
+    
+    // Calculate weekly stats
     const weeklyTimeEntries = await TimeEntry.find({
       teacherId,
       date: { $gte: startOfWeek, $lte: endOfWeek }
     });
     
     let weeklyHours = 0;
+    let weeklyEarnings = 0;
     weeklyTimeEntries.forEach(entry => {
       if (entry.hoursWorked) {
         weeklyHours += entry.hoursWorked;
       }
+      if (entry.totalAmount) {
+        weeklyEarnings += entry.totalAmount;
+      }
     });
     
-    // Calculate monthly earnings from time entries
+    // Calculate monthly stats
     const monthlyTimeEntries = await TimeEntry.find({
       teacherId,
       date: { $gte: startOfMonth, $lte: endOfMonth }
     });
     
+    let monthlyHours = 0;
     let monthlyEarnings = 0;
-    let totalHours = 0;
     monthlyTimeEntries.forEach(entry => {
+      if (entry.hoursWorked) {
+        monthlyHours += entry.hoursWorked;
+      }
       if (entry.totalAmount) {
         monthlyEarnings += entry.totalAmount;
-      }
-      if (entry.hoursWorked) {
-        totalHours += entry.hoursWorked;
       }
     });
     
     // Calculate average hourly rate
-    const avgRate = totalHours > 0 ? monthlyEarnings / totalHours : 0;
+    const avgRate = monthlyHours > 0 ? monthlyEarnings / monthlyHours : 0;
     
     // Get recent time entries (last 5)
     const recentTimeEntries = await TimeEntry.find({ teacherId })
@@ -227,6 +316,7 @@ exports.getTeacherDashboardStats = async (req, res) => {
     // Format recent entries for frontend
     const recentEntries = recentTimeEntries.map(entry => ({
       id: entry._id,
+      className: 'Time Entry',
       hours: entry.hoursWorked,
       amount: entry.totalAmount,
       date: entry.date,
@@ -238,10 +328,23 @@ exports.getTeacherDashboardStats = async (req, res) => {
       success: true,
       data: {
         myStudents,
-        weeklyHours: Math.round(weeklyHours * 100) / 100, // Round to 2 decimal places
-        monthlyEarnings: Math.round(monthlyEarnings * 100) / 100,
+        dailyStats: {
+          hours: Math.round(dailyHours * 100) / 100,
+          earnings: Math.round(dailyEarnings * 100) / 100
+        },
+        weeklyStats: {
+          hours: Math.round(weeklyHours * 100) / 100,
+          earnings: Math.round(weeklyEarnings * 100) / 100
+        },
+        monthlyStats: {
+          hours: Math.round(monthlyHours * 100) / 100,
+          earnings: Math.round(monthlyEarnings * 100) / 100
+        },
         avgRate: Math.round(avgRate * 100) / 100,
         recentEntries,
+        // Keep legacy fields for backwards compatibility
+        weeklyHours: Math.round(weeklyHours * 100) / 100,
+        monthlyEarnings: Math.round(monthlyEarnings * 100) / 100,
         lastUpdated: new Date()
       }
     });

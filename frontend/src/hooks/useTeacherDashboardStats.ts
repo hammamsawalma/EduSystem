@@ -1,12 +1,21 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 
+interface PeriodStats {
+  hours: number;
+  earnings: number;
+}
+
 interface TeacherDashboardStats {
   myStudents: number;
-  weeklyHours: number;
-  monthlyEarnings: number;
+  dailyStats: PeriodStats;
+  weeklyStats: PeriodStats;
+  monthlyStats: PeriodStats;
   avgRate: number;
   recentEntries: RecentTimeEntry[];
+  // Legacy fields for backwards compatibility
+  weeklyHours: number;
+  monthlyEarnings: number;
   isLoading: boolean;
   error: string | null;
   lastUpdated?: Date;
@@ -23,10 +32,13 @@ interface RecentTimeEntry {
 
 const initialStats: TeacherDashboardStats = {
   myStudents: 0,
-  weeklyHours: 0,
-  monthlyEarnings: 0,
+  dailyStats: { hours: 0, earnings: 0 },
+  weeklyStats: { hours: 0, earnings: 0 },
+  monthlyStats: { hours: 0, earnings: 0 },
   avgRate: 0,
   recentEntries: [],
+  weeklyHours: 0,
+  monthlyEarnings: 0,
   isLoading: true,
   error: null
 };
@@ -43,19 +55,26 @@ export const useTeacherDashboardStats = () => {
       if (response.data && response.data.success) {
         const { 
           myStudents, 
+          dailyStats,
+          weeklyStats,
+          monthlyStats,
+          avgRate, 
+          recentEntries,
+          // Legacy fields
           weeklyHours, 
           monthlyEarnings, 
-          avgRate, 
-          recentEntries, 
           lastUpdated 
         } = response.data.data;
         
         setStats({
           myStudents: myStudents || 0,
-          weeklyHours: weeklyHours || 0,
-          monthlyEarnings: monthlyEarnings || 0,
+          dailyStats: dailyStats || { hours: 0, earnings: 0 },
+          weeklyStats: weeklyStats || { hours: 0, earnings: 0 },
+          monthlyStats: monthlyStats || { hours: 0, earnings: 0 },
           avgRate: avgRate || 0,
           recentEntries: recentEntries || [],
+          weeklyHours: weeklyHours || 0,
+          monthlyEarnings: monthlyEarnings || 0,
           lastUpdated: lastUpdated ? new Date(lastUpdated) : undefined,
           isLoading: false,
           error: null

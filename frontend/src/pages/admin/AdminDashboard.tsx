@@ -8,12 +8,15 @@ import { formatCurrency as formatCurrencyUtil } from '../../utils/currency';
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { 
-    stats: { totalTeachers, totalStudents, monthlyRevenue, monthlyHours },
+    stats,
     activities,
     pendingActions,
     isLoading,
     error
   } = useAdminDashboard();
+  
+  // Destructure for convenience
+  const { totalTeachers, totalStudents } = stats;
   
   // Format currency for display
   const formatCurrency = (amount: number) => {
@@ -27,8 +30,8 @@ const AdminDashboard: React.FC = () => {
         <p className="text-gray-600">Overview of your education system</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="card">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -77,7 +80,7 @@ const AdminDashboard: React.FC = () => {
               {isLoading.stats ? (
                 <div className="h-6 w-16 bg-gray-200 animate-pulse rounded"></div>
               ) : (
-                <p className="text-2xl font-bold text-gray-900">{formatCurrency(monthlyRevenue)}</p>
+                <p className="text-2xl font-bold text-gray-900">{formatCurrency(stats.monthlyStats.revenue)}</p>
               )}
             </div>
           </div>
@@ -91,11 +94,119 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Hours This Month</p>
+              <p className="text-sm font-medium text-gray-600">Monthly Hours</p>
               {isLoading.stats ? (
                 <div className="h-6 w-16 bg-gray-200 animate-pulse rounded"></div>
               ) : (
-                <p className="text-2xl font-bold text-gray-900">{monthlyHours.toLocaleString()}</p>
+                <p className="text-2xl font-bold text-gray-900">{stats.monthlyStats.hours.toLocaleString()}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Detailed Stats Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Daily Stats */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-gray-900">Today</h3>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                </div>
+                <span className="ml-2 text-sm text-gray-600">Hours</span>
+              </div>
+              {isLoading.stats ? (
+                <div className="h-5 w-12 bg-gray-200 animate-pulse rounded"></div>
+              ) : (
+                <span className="text-lg font-semibold text-gray-900">{stats.dailyStats.hours}</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-green-100 rounded-md flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                </div>
+                <span className="ml-2 text-sm text-gray-600">Revenue</span>
+              </div>
+              {isLoading.stats ? (
+                <div className="h-5 w-16 bg-gray-200 animate-pulse rounded"></div>
+              ) : (
+                <span className="text-lg font-semibold text-gray-900">{formatCurrency(stats.dailyStats.revenue)}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Weekly Stats */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-gray-900">This Week</h3>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                </div>
+                <span className="ml-2 text-sm text-gray-600">Hours</span>
+              </div>
+              {isLoading.stats ? (
+                <div className="h-5 w-12 bg-gray-200 animate-pulse rounded"></div>
+              ) : (
+                <span className="text-lg font-semibold text-gray-900">{stats.weeklyStats.hours}</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-green-100 rounded-md flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                </div>
+                <span className="ml-2 text-sm text-gray-600">Revenue</span>
+              </div>
+              {isLoading.stats ? (
+                <div className="h-5 w-16 bg-gray-200 animate-pulse rounded"></div>
+              ) : (
+                <span className="text-lg font-semibold text-gray-900">{formatCurrency(stats.weeklyStats.revenue)}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly Stats */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-gray-900">This Month</h3>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                </div>
+                <span className="ml-2 text-sm text-gray-600">Hours</span>
+              </div>
+              {isLoading.stats ? (
+                <div className="h-5 w-12 bg-gray-200 animate-pulse rounded"></div>
+              ) : (
+                <span className="text-lg font-semibold text-gray-900">{stats.monthlyStats.hours}</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-green-100 rounded-md flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                </div>
+                <span className="ml-2 text-sm text-gray-600">Revenue</span>
+              </div>
+              {isLoading.stats ? (
+                <div className="h-5 w-16 bg-gray-200 animate-pulse rounded"></div>
+              ) : (
+                <span className="text-lg font-semibold text-gray-900">{formatCurrency(stats.monthlyStats.revenue)}</span>
               )}
             </div>
           </div>

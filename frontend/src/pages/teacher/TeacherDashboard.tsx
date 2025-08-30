@@ -6,8 +6,9 @@ import { formatCurrency } from '../../utils/currency';
 const TeacherDashboard: React.FC = () => {
   const { 
     myStudents, 
-    weeklyHours, 
-    monthlyEarnings, 
+    dailyStats,
+    weeklyStats,
+    monthlyStats,
     avgRate, 
     recentEntries, 
     isLoading, 
@@ -43,8 +44,8 @@ const TeacherDashboard: React.FC = () => {
         <p className="text-gray-600">Welcome back! Here's an overview of your teaching activities</p>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Stats Overview Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="card">
           <div className="flex items-center">
             <div className="flex-shrink-0">
@@ -69,9 +70,9 @@ const TeacherDashboard: React.FC = () => {
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">This Week</p>
+              <p className="text-sm font-medium text-gray-600">Weekly Hours</p>
               <p className="text-2xl font-bold text-gray-900">
-                {isLoading ? '...' : `${weeklyHours}h`}
+                {isLoading ? '...' : `${weeklyStats.hours}h`}
               </p>
             </div>
           </div>
@@ -85,9 +86,9 @@ const TeacherDashboard: React.FC = () => {
               </div>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">This Month</p>
+              <p className="text-sm font-medium text-gray-600">Monthly Earnings</p>
               <p className="text-2xl font-bold text-gray-900">
-                {isLoading ? '...' : formatCurrency(monthlyEarnings)}
+                {isLoading ? '...' : formatCurrency(monthlyStats.earnings)}
               </p>
             </div>
           </div>
@@ -110,7 +111,115 @@ const TeacherDashboard: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Detailed Stats Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+        {/* Daily Stats */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-gray-900">Today</h3>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                </div>
+                <span className="ml-2 text-sm text-gray-600">Hours</span>
+              </div>
+              {isLoading ? (
+                <div className="h-5 w-12 bg-gray-200 animate-pulse rounded"></div>
+              ) : (
+                <span className="text-lg font-semibold text-gray-900">{dailyStats.hours}</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-green-100 rounded-md flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                </div>
+                <span className="ml-2 text-sm text-gray-600">Earnings</span>
+              </div>
+              {isLoading ? (
+                <div className="h-5 w-16 bg-gray-200 animate-pulse rounded"></div>
+              ) : (
+                <span className="text-lg font-semibold text-gray-900">{formatCurrency(dailyStats.earnings)}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Weekly Stats */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-gray-900">This Week</h3>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                </div>
+                <span className="ml-2 text-sm text-gray-600">Hours</span>
+              </div>
+              {isLoading ? (
+                <div className="h-5 w-12 bg-gray-200 animate-pulse rounded"></div>
+              ) : (
+                <span className="text-lg font-semibold text-gray-900">{weeklyStats.hours}</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-green-100 rounded-md flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                </div>
+                <span className="ml-2 text-sm text-gray-600">Earnings</span>
+              </div>
+              {isLoading ? (
+                <div className="h-5 w-16 bg-gray-200 animate-pulse rounded"></div>
+              ) : (
+                <span className="text-lg font-semibold text-gray-900">{formatCurrency(weeklyStats.earnings)}</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Monthly Stats */}
+        <div className="card">
+          <div className="card-header">
+            <h3 className="text-lg font-semibold text-gray-900">This Month</h3>
+          </div>
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-blue-100 rounded-md flex items-center justify-center">
+                  <Clock className="w-4 h-4 text-blue-600" />
+                </div>
+                <span className="ml-2 text-sm text-gray-600">Hours</span>
+              </div>
+              {isLoading ? (
+                <div className="h-5 w-12 bg-gray-200 animate-pulse rounded"></div>
+              ) : (
+                <span className="text-lg font-semibold text-gray-900">{monthlyStats.hours}</span>
+              )}
+            </div>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <div className="w-6 h-6 bg-green-100 rounded-md flex items-center justify-center">
+                  <DollarSign className="w-4 h-4 text-green-600" />
+                </div>
+                <span className="ml-2 text-sm text-gray-600">Earnings</span>
+              </div>
+              {isLoading ? (
+                <div className="h-5 w-16 bg-gray-200 animate-pulse rounded"></div>
+              ) : (
+                <span className="text-lg font-semibold text-gray-900">{formatCurrency(monthlyStats.earnings)}</span>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Quick Actions and Recent Entries */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
           <div className="card-header">
@@ -151,7 +260,7 @@ const TeacherDashboard: React.FC = () => {
                   <div>
                     <p className="text-sm font-medium text-gray-900">{entry.className}</p>
                     <p className="text-xs text-gray-500">
-                      {entry.hours} hours • ${entry.amount}
+                      {entry.hours} hours • {formatCurrency(entry.amount)}
                     </p>
                   </div>
                   <span className="text-xs text-gray-500">{entry.dateString}</span>

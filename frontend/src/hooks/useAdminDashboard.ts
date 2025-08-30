@@ -25,9 +25,18 @@ interface PendingActions {
   };
 }
 
+interface PeriodStats {
+  hours: number;
+  revenue: number;
+}
+
 interface DashboardStats {
   totalTeachers: number;
   totalStudents: number;
+  dailyStats: PeriodStats;
+  weeklyStats: PeriodStats;
+  monthlyStats: PeriodStats;
+  // Legacy fields for backwards compatibility
   monthlyRevenue: number;
   monthlyHours: number;
   lastUpdated?: Date;
@@ -53,6 +62,9 @@ interface AdminDashboardData {
 const initialStats: DashboardStats = {
   totalTeachers: 0,
   totalStudents: 0,
+  dailyStats: { hours: 0, revenue: 0 },
+  weeklyStats: { hours: 0, revenue: 0 },
+  monthlyStats: { hours: 0, revenue: 0 },
   monthlyRevenue: 0,
   monthlyHours: 0
 };
@@ -93,11 +105,23 @@ export const useAdminDashboard = (): AdminDashboardData => {
         const response = await api.get('/dashboard/stats');
         
         if (response.data && response.data.success) {
-          const { totalTeachers, totalStudents, monthlyRevenue, monthlyHours, lastUpdated } = response.data.data;
+          const { 
+            totalTeachers, 
+            totalStudents, 
+            dailyStats, 
+            weeklyStats, 
+            monthlyStats,
+            monthlyRevenue, 
+            monthlyHours, 
+            lastUpdated 
+          } = response.data.data;
           
           setStats({
             totalTeachers: totalTeachers || 0,
             totalStudents: totalStudents || 0,
+            dailyStats: dailyStats || { hours: 0, revenue: 0 },
+            weeklyStats: weeklyStats || { hours: 0, revenue: 0 },
+            monthlyStats: monthlyStats || { hours: 0, revenue: 0 },
             monthlyRevenue: monthlyRevenue || 0,
             monthlyHours: monthlyHours || 0,
             lastUpdated: lastUpdated ? new Date(lastUpdated) : undefined
