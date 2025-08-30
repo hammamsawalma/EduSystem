@@ -174,6 +174,95 @@ export const accountingService = {
   }): Promise<ApiResponse<CashFlowResponse>> => {
     const response = await api.get('/accounting/cashflow', { params });
     return response.data;
+  },
+
+  // Create expense
+  createExpense: async (data: {
+    category: string;
+    amount: number;
+    description: string;
+    expenseDate: string;
+    paymentMethod?: string;
+    status?: string;
+    vendor?: string;
+    invoiceNumber?: string;
+    receiptUrl?: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await api.post('/accounting/expenses', {
+      category: data.category,
+      amount: data.amount,
+      description: data.description,
+      expenseDate: data.expenseDate,
+      paymentMethod: data.paymentMethod || 'bank_transfer',
+      status: data.status || 'pending',
+      vendor: data.vendor || '',
+      invoiceNumber: data.invoiceNumber || '',
+      receiptUrl: data.receiptUrl || ''
+    });
+    return response.data;
+  }
+};
+
+// Student Payment Services
+export const studentPaymentService = {
+  // Create student payment
+  createStudentPayment: async (data: {
+    studentId: string;
+    amount: number;
+    currency?: string;
+    paymentMethod: 'cash' | 'check' | 'bank_transfer' | 'online' | 'card' | 'mobile_payment';
+    paymentDate: string;
+    paymentType?: string;
+    reference?: string;
+    notes?: string;
+    academicPeriod?: string;
+    dueDate?: string;
+    status?: string;
+  }): Promise<ApiResponse<any>> => {
+    const response = await api.post('/payments', {
+      studentId: data.studentId,
+      amount: data.amount,
+      currency: data.currency || 'DZD',
+      paymentMethod: data.paymentMethod,
+      paymentDate: data.paymentDate,
+      paymentType: data.paymentType || 'lesson_payment',
+      reference: data.reference || '',
+      notes: data.notes || '',
+      academicPeriod: data.academicPeriod || '',
+      dueDate: data.dueDate,
+      status: data.status || 'completed'
+    });
+    return response.data;
+  },
+
+  // Get student payments
+  getStudentPayments: async (
+    studentId: string,
+    params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+      startDate?: string;
+      endDate?: string;
+    }
+  ): Promise<ApiResponse<any[]>> => {
+    const response = await api.get(`/payments/student/${studentId}`, { params });
+    return response.data;
+  },
+
+  // Get all payments
+  getAllPayments: async (params?: {
+    page?: number;
+    limit?: number;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+    studentId?: string;
+    paymentMethod?: string;
+    paymentType?: string;
+  }): Promise<ApiResponse<any[]>> => {
+    const response = await api.get('/payments', { params });
+    return response.data;
   }
 };
 
@@ -214,6 +303,16 @@ export const teacherPaymentTypes = [
   { value: 'commission', label: 'Commission' },
   { value: 'reimbursement', label: 'Reimbursement' },
   { value: 'advance', label: 'Advance Payment' },
+  { value: 'other', label: 'Other' }
+];
+
+// Student payment types
+export const studentPaymentTypes = [
+  { value: 'lesson_payment', label: 'Lesson Payment' },
+  { value: 'registration_fee', label: 'Registration Fee' },
+  { value: 'material_fee', label: 'Material Fee' },
+  { value: 'makeup_fee', label: 'Makeup Fee' },
+  { value: 'late_fee', label: 'Late Fee' },
   { value: 'other', label: 'Other' }
 ];
 

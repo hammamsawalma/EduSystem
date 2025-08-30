@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { DollarSign, Building, Calendar, FileText } from 'lucide-react';
+import { DollarSign, Building, Calendar, FileText, Upload } from 'lucide-react';
 import Modal from '../../../common/Modal';
 
 interface ExpenseModalProps {
@@ -14,21 +14,21 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
   onExpenseSubmit
 }) => {
   const [formData, setFormData] = useState({
-    category: 'rent',
+    category: 'supplies',
     amount: '',
+    expenseDate: new Date().toISOString().split('T')[0], // Default to today
     description: '',
-    expenseDate: new Date().toISOString().split('T')[0],
-    status: 'pending',
     paymentMethod: 'bank_transfer',
     vendor: '',
     invoiceNumber: '',
-    receipt: null as File | null
+    receiptUrl: '',
+    status: 'pending'
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.category || !formData.amount || !formData.description) {
+    if (!formData.category || !formData.amount || !formData.description || !formData.expenseDate) {
       alert('Please fill in all required fields');
       return;
     }
@@ -42,15 +42,15 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
     
     // Reset form
     setFormData({
-      category: 'rent',
+      category: 'supplies',
       amount: '',
-      description: '',
       expenseDate: new Date().toISOString().split('T')[0],
-      status: 'pending',
+      description: '',
       paymentMethod: 'bank_transfer',
       vendor: '',
       invoiceNumber: '',
-      receipt: null
+      receiptUrl: '',
+      status: 'pending'
     });
     onClose();
   };
@@ -220,27 +220,23 @@ const ExpenseModal: React.FC<ExpenseModalProps> = ({
           </select>
         </div>
 
-        {/* Receipt Upload */}
-        {/* <div>
+        {/* Receipt URL */}
+        <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <Upload className="h-4 w-4 inline mr-1" />
-            Receipt/Invoice Upload
+            Receipt/Invoice URL
           </label>
           <input
-            type="file"
-            onChange={handleFileChange}
-            accept=".pdf,.jpg,.jpeg,.png,.gif"
+            type="url"
+            value={formData.receiptUrl}
+            onChange={(e) => setFormData(prev => ({ ...prev, receiptUrl: e.target.value }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="https://example.com/receipt.pdf"
           />
           <p className="text-xs text-gray-500 mt-1">
-            Accepted formats: PDF, JPG, PNG, GIF (Max 5MB)
+            Optional: URL to receipt or invoice document
           </p>
-          {formData.receipt && (
-            <p className="text-sm text-green-600 mt-1">
-              Selected: {formData.receipt.name}
-            </p>
-          )}
-        </div> */}
+        </div>
 
         {/* Summary Box */}
         <div className="bg-gray-50 p-4 rounded-lg">

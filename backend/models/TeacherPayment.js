@@ -43,16 +43,6 @@ const teacherPaymentSchema = new mongoose.Schema({
     enum: ['salary', 'hourly_payment', 'bonus', 'commission', 'reimbursement', 'advance', 'other'],
     default: 'hourly_payment'
   },
-  periodCovered: {
-    startDate: {
-      type: Date,
-      required: true
-    },
-    endDate: {
-      type: Date,
-      required: true
-    }
-  },
   hoursWorked: {
     type: Number,
     min: [0, 'Hours worked must be positive'],
@@ -141,7 +131,6 @@ const teacherPaymentSchema = new mongoose.Schema({
 teacherPaymentSchema.index({ teacherId: 1, paymentDate: -1 });
 teacherPaymentSchema.index({ teacherId: 1, status: 1 });
 teacherPaymentSchema.index({ status: 1, paymentDate: -1 });
-teacherPaymentSchema.index({ 'periodCovered.startDate': 1, 'periodCovered.endDate': 1 });
 
 // Virtual for formatted amount
 teacherPaymentSchema.virtual('formattedAmount').get(function() {
@@ -153,9 +142,9 @@ teacherPaymentSchema.virtual('isOverdue').get(function() {
   if (this.status === 'paid' || this.status === 'cancelled') {
     return false;
   }
-  // Consider payment overdue if it's 7 days past the end of period covered
-  const overdueDate = new Date(this.periodCovered.endDate);
-  overdueDate.setDate(overdueDate.getDate() + 7);
+  // Consider payment overdue if it's 30 days past the payment date
+  const overdueDate = new Date(this.paymentDate);
+  overdueDate.setDate(overdueDate.getDate() + 30);
   return new Date() > overdueDate;
 });
 
@@ -175,11 +164,6 @@ teacherPaymentSchema.pre('save', async function(next) {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     
     this.receiptNumber = `TPY-${year}${month}-${String(count + 1).padStart(4, '0')}`;
-  }
-  
-  // Validate period covered
-  if (this.periodCovered.startDate >= this.periodCovered.endDate) {
-    throw new Error('Period start date must be before end date');
   }
   
   // Auto-calculate amount for hourly payments
@@ -293,15 +277,15 @@ teacherPaymentSchema.statics.getAllTeachersPaymentSummary = async function(start
 // Static method to get overdue teacher payments
 teacherPaymentSchema.statics.getOverduePayments = async function() {
   const overdueDate = new Date();
-  overdueDate.setDate(overdueDate.getDate() - 7);
+  overdueDate.setDate(overdueDate.getDate() - 30);
   
   return this.find({
     status: { $in: ['pending', 'approved'] },
-    'periodCovered.endDate': { $lt: overdueDate }
+    'paymentDate': { $lt: overdueDate }
   })
   .populate('teacherId', 'profile.firstName profile.lastName email')
   .populate('submittedBy', 'profile.firstName profile.lastName')
-  .sort({ 'periodCovered.endDate': 1 });
+  .sort({ 'paymentDate': 1 });
 };
 
 // Ensure virtual fields are serialized

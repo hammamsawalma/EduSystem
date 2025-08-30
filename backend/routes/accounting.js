@@ -30,6 +30,20 @@ router.get('/teachers',  accountingController.getTeacherAccounting);
 router.get('/expenses',  accountingController.getGeneralExpenses);
 
 /**
+ * @route   POST /api/accounting/expenses
+ * @desc    Create a new expense
+ * @access  Private (Admin)
+ */
+router.post('/expenses', [
+  body('category').notEmpty().withMessage('Category is required'),
+  body('amount').isFloat({ min: 0 }).withMessage('Amount must be a positive number'),
+  body('description').notEmpty().withMessage('Description is required'),
+  body('expenseDate').isISO8601().withMessage('Valid expense date is required'),
+  body('paymentMethod').optional().isIn(['cash', 'bank_transfer', 'credit_card', 'debit_card', 'cheque', 'digital_wallet']).withMessage('Invalid payment method'),
+  body('status').optional().isIn(['pending', 'approved', 'paid', 'rejected']).withMessage('Invalid status')
+], accountingController.createExpense);
+
+/**
  * @route   POST /api/accounting/reports
  * @desc    Generate comprehensive financial report
  * @access  Private (Admin)

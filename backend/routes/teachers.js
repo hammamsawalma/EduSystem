@@ -62,8 +62,7 @@ router.post('/:id/payments', [
   body('amount').isFloat({ min: 0.01 }).withMessage('Amount must be greater than 0'),
   body('paymentMethod').isIn(['cash', 'bank_transfer', 'check', 'online', 'card', 'mobile_payment']).withMessage('Invalid payment method'),
   body('paymentType').isIn(['salary', 'hourly_payment', 'bonus', 'commission', 'reimbursement', 'advance', 'other']).withMessage('Invalid payment type'),
-  body('periodCovered.startDate').isISO8601().withMessage('Valid start date is required'),
-  body('periodCovered.endDate').isISO8601().withMessage('Valid end date is required'),
+  body('paymentDate').optional().isISO8601().withMessage('Valid payment date is required'),
   body('hoursWorked').optional().isFloat({ min: 0 }).withMessage('Hours worked must be positive'),
   body('hourlyRate').optional().isFloat({ min: 0 }).withMessage('Hourly rate must be positive')
 ], teacherController.createTeacherPayment);

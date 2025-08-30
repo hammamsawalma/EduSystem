@@ -79,17 +79,31 @@ const ExpensesTab: React.FC<ExpensesTabProps> = ({ dateRange }) => {
 
   const handleExpenseSubmit = async (expenseData: any) => {
     try {
-      // Here you would make the API call to create the expense
-      console.log("Creating expense:", expenseData);
+      // Make the API call to create the expense
+      const response = await accountingService.createExpense({
+        category: expenseData.category,
+        amount: parseFloat(expenseData.amount),
+        description: expenseData.description,
+        expenseDate: expenseData.expenseDate,
+        paymentMethod: expenseData.paymentMethod,
+        status: expenseData.status,
+        vendor: expenseData.vendor,
+        invoiceNumber: expenseData.invoiceNumber,
+        receiptUrl: expenseData.receiptUrl || ''
+      });
 
-      // Refresh the data after successful expense creation
-      await fetchExpenses();
-
-      // Show success message
-      alert("Expense added successfully!");
+      if (response.success) {
+        // Refresh the data after successful expense creation
+        await fetchExpenses();
+        
+        // Show success message
+        alert("Expense added successfully!");
+      } else {
+        throw new Error(response.message || 'Failed to create expense');
+      }
     } catch (error) {
       console.error("Error creating expense:", error);
-      alert("Failed to add expense");
+      alert("Failed to add expense: " + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 

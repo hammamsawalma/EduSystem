@@ -438,7 +438,7 @@ const getProfitLossSummary = async (req, res) => {
       {
         $match: {
           date: { $gte: start, $lte: end },
-          status: 'approved'
+          status: { $in: ['approved', 'paid'] }
         }
       },
       {
@@ -703,6 +703,91 @@ const getCashFlow = async (req, res) => {
   }
 };
 
+/**
+ * Create a new expense
+ * @route POST /api/accounting/expenses
+ * @access Private (Admin)
+ */
+const createExpense = async (req, res) => {
+  try {
+    const { 
+      category, 
+      amount, 
+      description, 
+      expenseDate, 
+      paymentMethod = 'bank_transfer',
+      status = 'pending',
+      vendor,
+      invoiceNumber,
+      receiptUrl 
+    } = req.body;
+
+    // Validate required fields
+    if (!category || !amount || !description || !expenseDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Category, amount, description, and expense date are required'
+      });
+    }
+
+    // Validate category
+    const validCategories = [
+      'rent', 'utilities', 'supplies', 'marketing', 'maintenance', 
+      'insurance', 'salaries', 'transportation', 'communication', 
+      'software', 'equipment', 'training', 'legal', 'accounting', 'other'
+    ];
+    if (!validCategories.includes(category)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid expense category'
+      });
+    }
+
+    // Create new expense using the correct field names from the model
+    const newExpense = new Expense({
+      submittedBy: req.user.id,
+      category,
+      amount: parseFloat(amount),
+      description,
+      date: new Date(expenseDate),
+      status,
+      receiptUrl: receiptUrl || '',
+      // Additional fields that might be useful
+      notes: `Payment Method: ${paymentMethod}${vendor ? `, Vendor: ${vendor}` : ''}${invoiceNumber ? `, Invoice: ${invoiceNumber}` : ''}`
+    });
+
+    // If status is approved, set approval fields
+    if (status === 'approved') {
+      newExpense.approvedBy = req.user.id;
+      newExpense.approvedAt = new Date();
+    }
+
+    // Save expense
+    const savedExpense = await newExpense.save();
+
+    // Populate the created expense with user details
+    const populatedExpense = await Expense.findById(savedExpense._id)
+      .populate('submittedBy', 'profile.firstName profile.lastName email')
+      .populate('approvedBy', 'profile.firstName profile.lastName email');
+
+    return res.status(201).json({
+      success: true,
+      message: 'Expense created successfully',
+      data: {
+        expense: populatedExpense
+      }
+    });
+
+  } catch (error) {
+    console.error('Error creating expense:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getStudentAccounting,
   getTeacherAccounting,
@@ -711,5 +796,6 @@ module.exports = {
   getFinancialReports,
   getProfitLossSummary,
   getFinancialComparison,
-  getCashFlow
+  getCashFlow,
+  createExpense
 };

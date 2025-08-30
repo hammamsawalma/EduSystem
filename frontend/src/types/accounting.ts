@@ -33,10 +33,6 @@ export interface TeacherPayment {
   paymentMethod: 'cash' | 'bank_transfer' | 'check' | 'online' | 'card' | 'mobile_payment';
   paymentDate: string;
   paymentType: 'salary' | 'hourly_payment' | 'bonus' | 'commission' | 'reimbursement' | 'advance' | 'other';
-  periodCovered: {
-    startDate: string;
-    endDate: string;
-  };
   hoursWorked?: number;
   hourlyRate?: number;
   description?: string;
@@ -70,12 +66,8 @@ export interface CreateTeacherPaymentRequest {
   amount: number;
   currency?: string;
   paymentMethod: string;
-  paymentDate?: string;
+  paymentDate: string;
   paymentType: string;
-  periodCovered: {
-    startDate: string;
-    endDate: string;
-  };
   hoursWorked?: number;
   hourlyRate?: number;
   description?: string;

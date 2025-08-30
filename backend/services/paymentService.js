@@ -454,10 +454,7 @@ class PaymentService {
         currency: 'USD',
         paymentType: 'hourly',
         paymentMethod: 'bank_transfer',
-        periodCovered: {
-          startDate,
-          endDate
-        },
+        paymentDate: endDate,
         hoursWorked: totalHours,
         hourlyRate,
         description: `Payment for ${totalHours} hours worked from ${startDate.toDateString()} to ${endDate.toDateString()}`,

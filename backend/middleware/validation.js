@@ -24,21 +24,10 @@ const validateTeacherPayment = [
     .isIn(['salary', 'hourly_payment', 'bonus', 'commission', 'reimbursement', 'advance', 'other'])
     .withMessage('Invalid payment type'),
   
-  body('periodCovered.startDate')
+  body('paymentDate')
+    .optional()
     .isISO8601()
-    .withMessage('Valid start date is required')
-    .custom((value, { req }) => {
-      const startDate = new Date(value);
-      const endDate = new Date(req.body.periodCovered.endDate);
-      if (startDate >= endDate) {
-        throw new Error('Start date must be before end date');
-      }
-      return true;
-    }),
-  
-  body('periodCovered.endDate')
-    .isISO8601()
-    .withMessage('Valid end date is required'),
+    .withMessage('Valid payment date is required'),
   
   body('hoursWorked')
     .optional()

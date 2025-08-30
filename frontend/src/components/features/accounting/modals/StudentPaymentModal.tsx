@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, User, Calendar, FileText } from 'lucide-react';
+import { DollarSign, User, Calendar, FileText, AlertCircle } from 'lucide-react';
 import Modal from '../../../common/Modal';
+import { studentPaymentService, paymentMethods, studentPaymentTypes } from '../../../../services/accountingService';
 
 interface Student {
   _id: string;
@@ -33,13 +34,20 @@ const StudentPaymentModal: React.FC<StudentPaymentModalProps> = ({
   const [formData, setFormData] = useState({
     studentId: '',
     amount: '',
+    currency: 'DZD',
     paymentMethod: 'cash',
-    description: '',
+    paymentDate: new Date().toISOString().split('T')[0],
+    paymentType: 'lesson_payment',
+    reference: '',
+    notes: '',
+    academicPeriod: '',
     dueDate: '',
-    status: 'received'
+    status: 'completed'
   });
 
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (student) {
@@ -57,52 +65,92 @@ const StudentPaymentModal: React.FC<StudentPaymentModalProps> = ({
     setFormData(prev => ({ ...prev, studentId }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.studentId || !formData.amount) {
-      alert('Please fill in all required fields');
+      setError('Please fill in all required fields');
       return;
     }
 
-    const paymentData = {
-      ...formData,
-      amount: parseFloat(formData.amount),
-      student: selectedStudent
-    };
+    setIsSubmitting(true);
+    setError(null);
 
-    onPaymentSubmit(paymentData);
-    
-    // Reset form
-    setFormData({
-      studentId: '',
-      amount: '',
-      paymentMethod: 'cash',
-      description: '',
-      dueDate: '',
-      status: 'received'
-    });
-    setSelectedStudent(null);
-    onClose();
+    try {
+      // Call the API to create the payment
+      const paymentData = {
+        studentId: formData.studentId,
+        amount: parseFloat(formData.amount),
+        currency: formData.currency,
+        paymentMethod: formData.paymentMethod as any,
+        paymentDate: formData.paymentDate,
+        paymentType: formData.paymentType,
+        reference: formData.reference,
+        notes: formData.notes,
+        academicPeriod: formData.academicPeriod,
+        dueDate: formData.dueDate || undefined,
+        status: formData.status
+      };
+
+      await studentPaymentService.createStudentPayment(paymentData);
+      
+      // Call the parent callback
+      onPaymentSubmit({
+        ...paymentData,
+        student: selectedStudent
+      });
+
+      // Reset form
+      setFormData({
+        studentId: '',
+        amount: '',
+        currency: 'DZD',
+        paymentMethod: 'cash',
+        paymentDate: new Date().toISOString().split('T')[0],
+        paymentType: 'lesson_payment',
+        reference: '',
+        notes: '',
+        academicPeriod: '',
+        dueDate: '',
+        status: 'completed'
+      });
+      setSelectedStudent(null);
+      onClose();
+    } catch (error) {
+      console.error('Error creating payment:', error);
+      setError('Failed to create payment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const paymentMethods = [
-    { value: 'cash', label: 'Cash' },
-    { value: 'card', label: 'Card' },
-    { value: 'bank_transfer', label: 'Bank Transfer' },
-    { value: 'cheque', label: 'Cheque' },
-    { value: 'online', label: 'Online Payment' }
+  const paymentStatuses = [
+    { value: 'completed', label: 'Completed' },
+    { value: 'pending', label: 'Pending' },
+    { value: 'failed', label: 'Failed' }
   ];
 
-  const paymentStatuses = [
-    { value: 'received', label: 'Received' },
-    { value: 'pending', label: 'Pending' },
-    { value: 'overdue', label: 'Overdue' }
+  const currencies = [
+    { value: 'DZD', label: 'DZD (Algerian Dinar)' },
+    { value: 'USD', label: 'USD (US Dollar)' },
+    { value: 'EUR', label: 'EUR (Euro)' }
   ];
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Record Student Payment" size="md">
+    <Modal isOpen={isOpen} onClose={onClose} title="Record Student Payment" size="lg">
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="flex">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Error</h3>
+                <div className="mt-2 text-sm text-red-700">{error}</div>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Student Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -151,22 +199,73 @@ const StudentPaymentModal: React.FC<StudentPaymentModalProps> = ({
           </div>
         )}
 
-        {/* Payment Amount */}
+        {/* Payment Amount and Currency */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <DollarSign className="h-4 w-4 inline mr-1" />
+              Payment Amount *
+            </label>
+            <input
+              type="number"
+              step="0.01"
+              min="0"
+              value={formData.amount}
+              onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="0.00"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Currency
+            </label>
+            <select
+              value={formData.currency}
+              onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              {currencies.map((currency) => (
+                <option key={currency.value} value={currency.value}>
+                  {currency.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Payment Date */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            <DollarSign className="h-4 w-4 inline mr-1" />
-            Payment Amount *
+            <Calendar className="h-4 w-4 inline mr-1" />
+            Payment Date *
           </label>
           <input
-            type="number"
-            step="0.01"
-            min="0"
-            value={formData.amount}
-            onChange={(e) => setFormData(prev => ({ ...prev, amount: e.target.value }))}
+            type="date"
+            value={formData.paymentDate}
+            onChange={(e) => setFormData(prev => ({ ...prev, paymentDate: e.target.value }))}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            placeholder="0.00"
             required
           />
+        </div>
+
+        {/* Payment Type */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Payment Type
+          </label>
+          <select
+            value={formData.paymentType}
+            onChange={(e) => setFormData(prev => ({ ...prev, paymentType: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {studentPaymentTypes.map((type) => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Payment Method */}
@@ -205,6 +304,34 @@ const StudentPaymentModal: React.FC<StudentPaymentModalProps> = ({
           </select>
         </div>
 
+        {/* Reference Number */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Reference Number
+          </label>
+          <input
+            type="text"
+            value={formData.reference}
+            onChange={(e) => setFormData(prev => ({ ...prev, reference: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="Optional reference number"
+          />
+        </div>
+
+        {/* Academic Period */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Academic Period
+          </label>
+          <input
+            type="text"
+            value={formData.academicPeriod}
+            onChange={(e) => setFormData(prev => ({ ...prev, academicPeriod: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder="e.g., 2024-2025 Term 1"
+          />
+        </div>
+
         {/* Due Date (for pending payments) */}
         {formData.status === 'pending' && (
           <div>
@@ -221,15 +348,15 @@ const StudentPaymentModal: React.FC<StudentPaymentModalProps> = ({
           </div>
         )}
 
-        {/* Description */}
+        {/* Notes */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
             <FileText className="h-4 w-4 inline mr-1" />
-            Description / Notes
+            Notes
           </label>
           <textarea
-            value={formData.description}
-            onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+            value={formData.notes}
+            onChange={(e) => setFormData(prev => ({ ...prev, notes: e.target.value }))}
             rows={3}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="Optional notes about this payment..."
@@ -242,14 +369,16 @@ const StudentPaymentModal: React.FC<StudentPaymentModalProps> = ({
             type="button"
             onClick={onClose}
             className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Record Payment
+            {isSubmitting ? 'Recording...' : 'Record Payment'}
           </button>
         </div>
       </form>

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { DollarSign, User, Calendar, Clock, FileText } from 'lucide-react';
+import { DollarSign, User, Calendar, Clock, FileText, AlertCircle } from 'lucide-react';
 import Modal from '../../../common/Modal';
+import { teacherService, paymentMethods, teacherPaymentTypes } from '../../../../services/accountingService';
 
 interface Teacher {
   _id: string;
@@ -34,13 +35,17 @@ const TeacherPaymentModal: React.FC<TeacherPaymentModalProps> = ({
     hours: '',
     hourlyRate: '',
     paymentMethod: 'bank_transfer',
+    paymentType: 'hourly_payment',
     description: '',
     status: 'pending',
-    paymentDate: new Date().toISOString().split('T')[0]
+    paymentDate: new Date().toISOString().split('T')[0],
+    currency: 'DZD'
   });
 
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
-  const [paymentType, setPaymentType] = useState<'manual' | 'hourly'>('manual');
+  const [calculationType, setCalculationType] = useState<'manual' | 'hourly'>('manual');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (teacher) {
@@ -71,53 +76,70 @@ const TeacherPaymentModal: React.FC<TeacherPaymentModalProps> = ({
   };
 
   useEffect(() => {
-    if (paymentType === 'hourly' && formData.hours && formData.hourlyRate) {
+    if (calculationType === 'hourly' && formData.hours && formData.hourlyRate) {
       const calculatedAmount = parseFloat(formData.hours) * parseFloat(formData.hourlyRate);
       setFormData(prev => ({ ...prev, amount: calculatedAmount.toFixed(2) }));
     }
-  }, [formData.hours, formData.hourlyRate, paymentType]);
+  }, [formData.hours, formData.hourlyRate, calculationType]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.teacherId || !formData.amount) {
-      alert('Please fill in all required fields');
+      setError('Please fill in all required fields');
       return;
     }
 
-    const paymentData = {
-      ...formData,
-      amount: parseFloat(formData.amount),
-      hours: formData.hours ? parseFloat(formData.hours) : undefined,
-      hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
-      teacher: selectedTeacher,
-      paymentType
-    };
+    setIsSubmitting(true);
+    setError(null);
 
-    onPaymentSubmit(paymentData);
-    
-    // Reset form
-    setFormData({
-      teacherId: '',
-      amount: '',
-      hours: '',
-      hourlyRate: '',
-      paymentMethod: 'bank_transfer',
-      description: '',
-      status: 'pending',
-      paymentDate: new Date().toISOString().split('T')[0]
-    });
-    setSelectedTeacher(null);
-    setPaymentType('manual');
-    onClose();
+    try {
+      const paymentData = {
+        amount: parseFloat(formData.amount),
+        paymentType: formData.paymentType as any,
+        paymentMethod: formData.paymentMethod,
+        paymentDate: formData.paymentDate,
+        hoursWorked: formData.hours ? parseFloat(formData.hours) : undefined,
+        hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
+        description: formData.description,
+        reference: formData.paymentMethod === 'bank_transfer' ? `PAY-${Date.now()}` : undefined
+      };
+
+      await teacherService.createTeacherPayment(formData.teacherId, paymentData);
+      
+      // Call the parent callback
+      onPaymentSubmit({
+        ...formData,
+        amount: parseFloat(formData.amount),
+        hours: formData.hours ? parseFloat(formData.hours) : undefined,
+        hourlyRate: formData.hourlyRate ? parseFloat(formData.hourlyRate) : undefined,
+        teacher: selectedTeacher,
+        calculationType
+      });
+
+      // Reset form
+      setFormData({
+        teacherId: '',
+        amount: '',
+        hours: '',
+        hourlyRate: '',
+        paymentMethod: 'bank_transfer',
+        paymentType: 'hourly_payment',
+        description: '',
+        status: 'pending',
+        paymentDate: new Date().toISOString().split('T')[0],
+        currency: 'DZD'
+      });
+      setSelectedTeacher(null);
+      setCalculationType('manual');
+      onClose();
+    } catch (error) {
+      console.error('Error creating teacher payment:', error);
+      setError('Failed to create payment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
-
-  const paymentMethods = [
-    { value: 'bank_transfer', label: 'Bank Transfer' },
-    { value: 'cash', label: 'Cash' },
-    { value: 'cheque', label: 'Cheque' },
-    { value: 'digital_wallet', label: 'Digital Wallet' }
-  ];
 
   const paymentStatuses = [
     { value: 'pending', label: 'Pending Approval' },
@@ -129,6 +151,18 @@ const TeacherPaymentModal: React.FC<TeacherPaymentModalProps> = ({
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Create Teacher Payment" size="lg">
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* Error Display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-4">
+            <div className="flex">
+              <AlertCircle className="h-5 w-5 text-red-400" />
+              <div className="ml-3">
+                <h3 className="text-sm font-medium text-red-800">Error</h3>
+                <div className="mt-2 text-sm text-red-700">{error}</div>
+              </div>
+            </div>
+          </div>
+        )}
         {/* Teacher Selection */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -183,8 +217,8 @@ const TeacherPaymentModal: React.FC<TeacherPaymentModalProps> = ({
               <input
                 type="radio"
                 value="manual"
-                checked={paymentType === 'manual'}
-                onChange={(e) => setPaymentType(e.target.value as 'manual' | 'hourly')}
+                checked={calculationType === 'manual'}
+                onChange={(e) => setCalculationType(e.target.value as 'manual' | 'hourly')}
                 className="mr-2"
               />
               Manual Amount
@@ -193,8 +227,8 @@ const TeacherPaymentModal: React.FC<TeacherPaymentModalProps> = ({
               <input
                 type="radio"
                 value="hourly"
-                checked={paymentType === 'hourly'}
-                onChange={(e) => setPaymentType(e.target.value as 'manual' | 'hourly')}
+                checked={calculationType === 'hourly'}
+                onChange={(e) => setCalculationType(e.target.value as 'manual' | 'hourly')}
                 className="mr-2"
               />
               Calculate from Hours
@@ -203,7 +237,7 @@ const TeacherPaymentModal: React.FC<TeacherPaymentModalProps> = ({
         </div>
 
         {/* Hourly Calculation Fields */}
-        {paymentType === 'hourly' && (
+        {calculationType === 'hourly' && (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -218,7 +252,7 @@ const TeacherPaymentModal: React.FC<TeacherPaymentModalProps> = ({
                 onChange={(e) => setFormData(prev => ({ ...prev, hours: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="0.0"
-                required={paymentType === 'hourly'}
+                required={calculationType === 'hourly'}
               />
             </div>
             <div>
@@ -234,7 +268,7 @@ const TeacherPaymentModal: React.FC<TeacherPaymentModalProps> = ({
                 onChange={(e) => setFormData(prev => ({ ...prev, hourlyRate: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="0.00"
-                required={paymentType === 'hourly'}
+                required={calculationType === 'hourly'}
               />
             </div>
           </div>
@@ -255,13 +289,31 @@ const TeacherPaymentModal: React.FC<TeacherPaymentModalProps> = ({
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             placeholder="0.00"
             required
-            readOnly={paymentType === 'hourly'}
+            readOnly={calculationType === 'hourly'}
           />
-          {paymentType === 'hourly' && (
+          {calculationType === 'hourly' && (
             <p className="text-sm text-gray-500 mt-1">
               Amount is calculated automatically based on hours and rate
             </p>
           )}
+        </div>
+
+        {/* Teacher Payment Type */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Payment Type
+          </label>
+          <select
+            value={formData.paymentType}
+            onChange={(e) => setFormData(prev => ({ ...prev, paymentType: e.target.value }))}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {teacherPaymentTypes.map((type) => (
+              <option key={type.value} value={type.value}>
+                {type.label}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Payment Method */}
@@ -335,14 +387,16 @@ const TeacherPaymentModal: React.FC<TeacherPaymentModalProps> = ({
             type="button"
             onClick={onClose}
             className="px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            disabled={isSubmitting}
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+            disabled={isSubmitting}
+            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Create Payment
+            {isSubmitting ? 'Creating...' : 'Create Payment'}
           </button>
         </div>
       </form>
