@@ -20,9 +20,6 @@ const auditLogSchema = new mongoose.Schema({
   },
   targetId: {
     type: mongoose.Schema.Types.ObjectId,
-    required: function() {
-      return this.targetType !== 'system';
-    }
   },
   previousValues: {
     type: mongoose.Schema.Types.Mixed,
