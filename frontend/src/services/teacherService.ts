@@ -108,6 +108,30 @@ export const teacherService = {
       console.error('Error searching teachers:', error);
       throw error;
     }
+  },
+
+  // Approve teacher payment
+  async approveTeacherPayment(paymentId: string) {
+    try {
+      const response = await api.put(`/teachers/payments/${paymentId}/approve`);
+      return response.data;
+    } catch (error) {
+      console.error(`Error approving teacher payment ${paymentId}:`, error);
+      throw error;
+    }
+  },
+
+  // Reject teacher payment
+  async rejectTeacherPayment(paymentId: string, rejectionReason: string) {
+    try {
+      const response = await api.put(`/teachers/payments/${paymentId}/reject`, {
+        reason: rejectionReason
+      });
+      return response.data;
+    } catch (error) {
+      console.error(`Error rejecting teacher payment ${paymentId}:`, error);
+      throw error;
+    }
   }
 };
 

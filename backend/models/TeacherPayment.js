@@ -83,7 +83,7 @@ const teacherPaymentSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'approved', 'paid', 'cancelled'],
+    enum: ['pending', 'approved', 'paid', 'cancelled', 'rejected'],
     default: 'pending',
     index: true
   },
@@ -98,6 +98,27 @@ const teacherPaymentSchema = new mongoose.Schema({
     type: Date,
     required: function() {
       return this.status === 'approved' || this.status === 'paid';
+    }
+  },
+  rejectedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: function() {
+      return this.status === 'rejected';
+    }
+  },
+  rejectedAt: {
+    type: Date,
+    required: function() {
+      return this.status === 'rejected';
+    }
+  },
+  rejectionReason: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Rejection reason cannot exceed 500 characters'],
+    required: function() {
+      return this.status === 'rejected';
     }
   },
   paidAt: {

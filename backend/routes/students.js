@@ -26,6 +26,9 @@ router.post('/remove-class', isAdmin, studentController.removeStudentFromClass);
 // GET /api/students/:id - Get single student
 router.get('/:id', studentController.getStudent);
 
+// GET /api/students/:id/accounting - Get student accounting details with pending payments
+router.get('/:id/accounting', studentController.getStudentAccounting);
+
 // POST /api/students - Create new student (Admin only)
 router.post('/', isAdmin, auditLoggers.studentCreate, studentController.createStudent);
 

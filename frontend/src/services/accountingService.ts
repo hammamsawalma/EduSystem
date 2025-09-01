@@ -200,6 +200,48 @@ export const accountingService = {
       receiptUrl: data.receiptUrl || ''
     });
     return response.data;
+  },
+
+  // Get single expense
+  getExpenseById: async (id: string): Promise<ApiResponse<any>> => {
+    const response = await api.get(`/accounting/expenses/${id}`);
+    return response.data;
+  },
+
+  // Update expense
+  updateExpense: async (
+    id: string,
+    data: {
+      category?: string;
+      amount?: number;
+      description?: string;
+      expenseDate?: string;
+      status?: string;
+      vendor?: string;
+      invoiceNumber?: string;
+      receiptUrl?: string;
+    }
+  ): Promise<ApiResponse<any>> => {
+    const response = await api.put(`/accounting/expenses/${id}`, data);
+    return response.data;
+  },
+
+  // Delete expense
+  deleteExpense: async (id: string): Promise<ApiResponse<any>> => {
+    const response = await api.delete(`/accounting/expenses/${id}`);
+    return response.data;
+  },
+
+  // Approve expense
+  approveExpense: async (id: string): Promise<ApiResponse<any>> => {
+    const response = await api.put(`/accounting/expenses/${id}/approve`);
+    return response.data;
+  },
+
+  // Reject expense
+  rejectExpense: async (id: string, reason: string): Promise<ApiResponse<any>> => {
+    const response = await api.put(`/accounting/expenses/${id}/reject`, { reason });
+    return response.data;
   }
 };
 
@@ -262,6 +304,45 @@ export const studentPaymentService = {
     paymentType?: string;
   }): Promise<ApiResponse<any[]>> => {
     const response = await api.get('/payments', { params });
+    return response.data;
+  },
+
+  // Approve payment
+  approvePayment: async (paymentId: string): Promise<ApiResponse<any>> => {
+    const response = await api.put(`/payments/${paymentId}/approve`);
+    return response.data;
+  },
+
+  // Reject payment
+  rejectPayment: async (paymentId: string, reason: string): Promise<ApiResponse<any>> => {
+    const response = await api.put(`/payments/${paymentId}/reject`, { reason });
+    return response.data;
+  },
+
+  // Get pending payments
+  getPendingPayments: async (params?: {
+    teacherId?: string;
+    studentId?: string;
+  }): Promise<ApiResponse<any[]>> => {
+    const response = await api.get('/payments/pending/all', { params });
+    return response.data;
+  },
+
+  // Get student accounting details
+  getStudentAccountingDetails: async (studentId: string): Promise<ApiResponse<any>> => {
+    const response = await api.get(`/students/${studentId}/accounting`);
+    return response.data;
+  },
+
+  // Approve teacher payment
+  approveTeacherPayment: async (paymentId: string): Promise<ApiResponse<any>> => {
+    const response = await api.put(`/teachers/payments/${paymentId}/approve`);
+    return response.data;
+  },
+
+  // Reject teacher payment
+  rejectTeacherPayment: async (paymentId: string, reason: string): Promise<ApiResponse<any>> => {
+    const response = await api.put(`/teachers/payments/${paymentId}/reject`, { reason });
     return response.data;
   }
 };

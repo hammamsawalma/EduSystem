@@ -75,6 +75,15 @@ router.post('/:id/payments', [
 router.put('/payments/:paymentId/approve',  teacherController.approveTeacherPayment);
 
 /**
+ * @route   PUT /api/teachers/payments/:paymentId/reject
+ * @desc    Reject teacher payment
+ * @access  Private (Admin)
+ */
+router.put('/payments/:paymentId/reject', [
+  body('reason').notEmpty().withMessage('Rejection reason is required')
+], teacherController.rejectTeacherPayment);
+
+/**
  * @route   PUT /api/teachers/payments/:paymentId/pay
  * @desc    Mark teacher payment as paid
  * @access  Private (Admin)

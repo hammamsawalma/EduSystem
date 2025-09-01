@@ -45,4 +45,13 @@ router.delete('/:id', auditLoggers.paymentDelete, paymentController.deletePaymen
 // POST /api/payments/:id/refund - Process refund
 router.post('/:id/refund', auditLoggers.paymentRefund, paymentController.processRefund);
 
+// PUT /api/payments/:id/approve - Approve pending payment (Admin only)
+router.put('/:id/approve', isAdmin, auditLoggers.paymentApprove, paymentController.approvePayment);
+
+// PUT /api/payments/:id/reject - Reject pending payment (Admin only)
+router.put('/:id/reject', isAdmin, auditLoggers.paymentReject, paymentController.rejectPayment);
+
+// GET /api/payments/pending - Get pending payments (Admin only)
+router.get('/pending/all', isAdmin, paymentController.getPendingPayments);
+
 module.exports = router;

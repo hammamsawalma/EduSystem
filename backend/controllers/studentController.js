@@ -641,6 +641,126 @@ const removeStudentFromClass = async (req, res) => {
   }
 };
 
+// Get student accounting details with payment history
+const getStudentAccounting = async (req, res) => {
+  try {
+    const studentId = req.params.id;
+    
+    // Check if student exists and user has access
+    let query = { _id: studentId };
+    if (req.user.role !== 'admin') {
+      query.teacherId = req.user._id;
+    }
+    
+    const student = await Student.findOne(query)
+      .populate('teacherId', 'profile.firstName profile.lastName email')
+      .populate('assignedClasses.classId', 'name hourlyRate currency');
+
+    if (!student) {
+      return res.status(404).json({
+        success: false,
+        message: 'Student not found or access denied'
+      });
+    }
+
+    // Get payment history
+    const Payment = require('../models/Payment');
+    const payments = await Payment.find({ studentId })
+      .populate('teacherId', 'profile.firstName profile.lastName email')
+      .sort({ paymentDate: -1 });
+
+    // Calculate financial summary
+    const completedPayments = payments.filter(p => p.status === 'completed');
+    const pendingPayments = payments.filter(p => p.status === 'pending');
+    const failedPayments = payments.filter(p => p.status === 'failed');
+    
+    const totalPaid = completedPayments.reduce((sum, p) => sum + p.amount, 0);
+    const totalPending = pendingPayments.reduce((sum, p) => sum + p.amount, 0);
+    const totalFailed = failedPayments.reduce((sum, p) => sum + p.amount, 0);
+    
+    // Calculate overdue payments (pending payments past due date)
+    const now = new Date();
+    const overduePayments = pendingPayments.filter(p => p.dueDate && new Date(p.dueDate) < now);
+    const totalOverdue = overduePayments.reduce((sum, p) => sum + p.amount, 0);
+    
+    // Estimate total fee (this would be calculated based on classes/lessons)
+    const estimatedTotalFee = totalPaid + totalPending;
+    const remainingBalance = Math.max(0, estimatedTotalFee - totalPaid);
+
+    const studentDetail = {
+      _id: student._id,
+      name: `${student.firstName} ${student.lastName}`,
+      email: student.email,
+      phone: student.phone,
+      level: student.level,
+      enrollmentDate: student.enrollmentDate,
+      status: student.status,
+      teacher: student.teacherId,
+      classes: student.assignedClasses,
+      financials: {
+        estimatedTotalFee,
+        totalPaid,
+        totalPending,
+        totalOverdue,
+        totalFailed,
+        remainingBalance,
+        paymentHistory: payments.map(payment => ({
+          _id: payment._id,
+          amount: payment.amount,
+          currency: payment.currency,
+          paymentDate: payment.paymentDate,
+          paymentMethod: payment.paymentMethod,
+          paymentType: payment.paymentType,
+          status: payment.status,
+          reference: payment.reference,
+          notes: payment.notes,
+          dueDate: payment.dueDate,
+          academicPeriod: payment.academicPeriod,
+          approvedBy: payment.approvedBy,
+          approvedAt: payment.approvedAt,
+          rejectedBy: payment.rejectedBy,
+          rejectedAt: payment.rejectedAt,
+          rejectionReason: payment.rejectionReason
+        })),
+        pendingPayments: pendingPayments.map(payment => ({
+          _id: payment._id,
+          amount: payment.amount,
+          currency: payment.currency,
+          paymentDate: payment.paymentDate,
+          paymentMethod: payment.paymentMethod,
+          paymentType: payment.paymentType,
+          reference: payment.reference,
+          notes: payment.notes,
+          dueDate: payment.dueDate,
+          academicPeriod: payment.academicPeriod
+        })),
+        overduePayments: overduePayments.map(payment => ({
+          _id: payment._id,
+          amount: payment.amount,
+          currency: payment.currency,
+          paymentDate: payment.paymentDate,
+          dueDate: payment.dueDate,
+          daysPastDue: Math.ceil((now - new Date(payment.dueDate)) / (1000 * 60 * 60 * 24))
+        }))
+      }
+    };
+
+    res.json({
+      success: true,
+      data: {
+        student: studentDetail
+      }
+    });
+  } catch (error) {
+    console.error('Get student accounting error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch student accounting details',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   getStudents,
   getStudent,
@@ -650,5 +770,6 @@ module.exports = {
   getStudentStats,
   bulkUpdateStudents,
   assignStudentToClass,
-  removeStudentFromClass
+  removeStudentFromClass,
+  getStudentAccounting
 };

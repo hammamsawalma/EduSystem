@@ -6,12 +6,14 @@ import {
   Calendar,
   DollarSign,
   FileText,
-  AlertCircle,
+  Trash2,
+  CheckCircle,
 } from "lucide-react";
 import { formatCurrency } from "../../../utils/currency";
 import { accountingService } from "../../../services/accountingService";
 import type { GeneralExpensesResponse } from "../../../types/accounting";
 import ExpenseModal from "./modals/ExpenseModal";
+import ViewExpenseModal from "./modals/ViewExpenseModal";
 
 interface DateRange {
   start: string;
@@ -26,6 +28,8 @@ const ExpensesTab: React.FC<ExpensesTabProps> = ({ dateRange }) => {
   const [data, setData] = useState<GeneralExpensesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddExpense, setShowAddExpense] = useState(false);
+  const [showViewExpense, setShowViewExpense] = useState(false);
+  const [selectedExpenseId, setSelectedExpenseId] = useState<string | null>(null);
   const [filter, setFilter] = useState("approved");
 
   const fetchExpenses = useCallback(async () => {
@@ -109,6 +113,53 @@ const ExpensesTab: React.FC<ExpensesTabProps> = ({ dateRange }) => {
 
   const closeModals = () => {
     setShowAddExpense(false);
+    setShowViewExpense(false);
+    setSelectedExpenseId(null);
+  };
+
+  const handleViewExpense = (expenseId: string) => {
+    setSelectedExpenseId(expenseId);
+    setShowViewExpense(true);
+  };
+
+  const handleApproveExpense = async (expenseId: string) => {
+    if (!window.confirm('Are you sure you want to approve this expense?')) {
+      return;
+    }
+
+    try {
+      const response = await accountingService.approveExpense(expenseId);
+      
+      if (response.success) {
+        await fetchExpenses();
+        alert('Expense approved successfully!');
+      } else {
+        alert('Failed to approve expense: ' + response.message);
+      }
+    } catch (error) {
+      console.error('Error approving expense:', error);
+      alert('Failed to approve expense');
+    }
+  };
+
+  const handleDeleteExpense = async (expenseId: string) => {
+    if (!window.confirm('Are you sure you want to delete this expense? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      const response = await accountingService.deleteExpense(expenseId);
+      
+      if (response.success) {
+        await fetchExpenses();
+        alert('Expense deleted successfully!');
+      } else {
+        alert('Failed to delete expense: ' + response.message);
+      }
+    } catch (error) {
+      console.error('Error deleting expense:', error);
+      alert('Failed to delete expense');
+    }
   };
 
   if (loading) {
@@ -298,20 +349,29 @@ const ExpensesTab: React.FC<ExpensesTabProps> = ({ dateRange }) => {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
-                        onClick={() => console.log("View expense", expense._id)}
+                        onClick={() => handleViewExpense(expense._id)}
                         className="text-blue-600 hover:text-blue-900 mr-3"
+                        title="View Details"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
                       {expense.status === "pending" && (
-                        <button
-                          onClick={() =>
-                            console.log("Approve expense", expense._id)
-                          }
-                          className="text-green-600 hover:text-green-900"
-                        >
-                          <AlertCircle className="h-4 w-4" />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => handleApproveExpense(expense._id)}
+                            className="text-green-600 hover:text-green-900 mr-3"
+                            title="Approve"
+                          >
+                            <CheckCircle className="h-4 w-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteExpense(expense._id)}
+                            className="text-red-600 hover:text-red-900"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </>
                       )}
                     </td>
                   </tr>
@@ -327,6 +387,12 @@ const ExpensesTab: React.FC<ExpensesTabProps> = ({ dateRange }) => {
         isOpen={showAddExpense}
         onClose={closeModals}
         onExpenseSubmit={handleExpenseSubmit}
+      />
+      <ViewExpenseModal
+        isOpen={showViewExpense}
+        onClose={closeModals}
+        expenseId={selectedExpenseId}
+        onExpenseUpdated={fetchExpenses}
       />
     </>
   );

@@ -3,6 +3,7 @@ import { User, Clock, AlertTriangle, Eye, Plus, CheckCircle } from 'lucide-react
 import { formatCurrency } from '../../../utils/currency';
 import { accountingService } from '../../../services/accountingService';
 import TeacherPaymentModal from './modals/TeacherPaymentModal';
+import TeacherDetailModal from './modals/TeacherDetailModal';
 
 interface DateRange {
   start: string;
@@ -52,6 +53,8 @@ const TeacherAccountingTab: React.FC<TeacherAccountingTabProps> = ({ dateRange }
   const [loading, setLoading] = useState(true);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const [showTeacherDetail, setShowTeacherDetail] = useState(false);
+  const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
 
   const fetchTeacherAccounting = useCallback(async () => {
     try {
@@ -108,9 +111,16 @@ const TeacherAccountingTab: React.FC<TeacherAccountingTabProps> = ({ dateRange }
     }
   };
 
+  const handleViewTeacher = (teacherId: string) => {
+    setSelectedTeacherId(teacherId);
+    setShowTeacherDetail(true);
+  };
+
   const closeModals = () => {
     setShowAddPayment(false);
     setSelectedTeacher(null);
+    setShowTeacherDetail(false);
+    setSelectedTeacherId(null);
   };
 
   if (loading) {
@@ -260,8 +270,9 @@ const TeacherAccountingTab: React.FC<TeacherAccountingTabProps> = ({ dateRange }
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button
-                        onClick={() => window.open(`/admin/teachers/${teacherData.teacher._id}`, '_blank')}
+                        onClick={() => handleViewTeacher(teacherData.teacher._id)}
                         className="text-blue-600 hover:text-blue-900 mr-3"
+                        title="View Teacher Details"
                       >
                         <Eye className="h-4 w-4" />
                       </button>
@@ -290,6 +301,19 @@ const TeacherAccountingTab: React.FC<TeacherAccountingTabProps> = ({ dateRange }
         teacher={selectedTeacher?.teacher || null}
         onPaymentSubmit={handlePaymentSubmit}
         teachers={data?.teachers.map(t => t.teacher) || []}
+      />
+
+      {/* Teacher Detail Modal */}
+      <TeacherDetailModal
+        isOpen={showTeacherDetail}
+        onClose={closeModals}
+        teacherId={selectedTeacherId}
+        onAddPayment={(teacherId) => {
+          const teacher = data?.teachers.find(t => t.teacher._id === teacherId);
+          if (teacher) {
+            handleAddPayment(teacher);
+          }
+        }}
       />
     </div>
   );

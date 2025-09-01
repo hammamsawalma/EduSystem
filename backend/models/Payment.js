@@ -98,6 +98,40 @@ const paymentSchema = new mongoose.Schema({
       message: 'Due date must be after payment date'
     }
   },
+  approvedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: function() {
+      return this.status === 'completed' && this.wasModified;
+    }
+  },
+  approvedAt: {
+    type: Date,
+    required: function() {
+      return this.status === 'completed' && this.wasModified;
+    }
+  },
+  rejectedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: function() {
+      return this.status === 'failed' && this.rejectionReason;
+    }
+  },
+  rejectedAt: {
+    type: Date,
+    required: function() {
+      return this.status === 'failed' && this.rejectionReason;
+    }
+  },
+  rejectionReason: {
+    type: String,
+    trim: true,
+    maxlength: [500, 'Rejection reason cannot exceed 500 characters'],
+    required: function() {
+      return this.status === 'failed' && this.rejectedBy;
+    }
+  },
   receiptNumber: {
     type: String,
     trim: true,

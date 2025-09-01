@@ -145,6 +145,8 @@ const auditLoggers = {
   paymentUpdate: auditLogger('Payment updated', 'payment'),
   paymentDelete: auditLogger('Payment deleted', 'payment'),
   paymentRefund: auditLogger('Payment refunded', 'payment'),
+  paymentApprove: auditLogger('Payment approved', 'payment'),
+  paymentReject: auditLogger('Payment rejected', 'payment'),
   paymentBulkCreate: auditLogger('Bulk payments created', 'payment'),
 
   // System actions

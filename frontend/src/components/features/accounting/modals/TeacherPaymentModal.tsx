@@ -144,7 +144,6 @@ const TeacherPaymentModal: React.FC<TeacherPaymentModalProps> = ({
   const paymentStatuses = [
     { value: 'pending', label: 'Pending Approval' },
     { value: 'approved', label: 'Approved' },
-    { value: 'paid', label: 'Paid' },
     { value: 'rejected', label: 'Rejected' }
   ];
 

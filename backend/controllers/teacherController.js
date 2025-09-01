@@ -378,6 +378,66 @@ const approveTeacherPayment = async (req, res) => {
 };
 
 /**
+ * Reject teacher payment
+ * @route PUT /api/teachers/payments/:paymentId/reject
+ * @access Private (Admin)
+ */
+const rejectTeacherPayment = async (req, res) => {
+  try {
+    const { paymentId } = req.params;
+    const { reason } = req.body;
+    
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rejection reason is required'
+      });
+    }
+    
+    const payment = await TeacherPayment.findById(paymentId);
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found'
+      });
+    }
+    
+    if (payment.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Payment is not in pending status'
+      });
+    }
+    
+    payment.status = 'rejected';
+    payment.rejectedBy = req.user._id;
+    payment.rejectedAt = new Date();
+    payment.rejectionReason = reason;
+    
+    await payment.save();
+    
+    await payment.populate([
+      { path: 'teacherId', select: 'profile.firstName profile.lastName email' },
+      { path: 'rejectedBy', select: 'profile.firstName profile.lastName' }
+    ]);
+    
+    return res.status(200).json({
+      success: true,
+      message: 'Payment rejected successfully',
+      data: payment
+    });
+    
+  } catch (error) {
+    console.error('Reject teacher payment error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+/**
  * Mark teacher payment as paid
  * @route PUT /api/teachers/payments/:paymentId/pay
  * @access Private (Admin)
@@ -522,6 +582,7 @@ module.exports = {
   getTeacherPayments,
   createTeacherPayment,
   approveTeacherPayment,
+  rejectTeacherPayment,
   markTeacherPaymentPaid,
   getOverdueTeacherPayments,
   getTeacherHoursAnalysis

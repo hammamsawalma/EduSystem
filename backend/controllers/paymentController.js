@@ -729,6 +729,160 @@ const updateStudentPaymentInfo = async (studentId) => {
   }
 };
 
+// Approve pending payment
+const approvePayment = async (req, res) => {
+  try {
+    const paymentId = req.params.id;
+    
+    const payment = await Payment.findById(paymentId)
+      .populate('studentId', 'personalInfo.firstName personalInfo.lastName personalInfo.email')
+      .populate('teacherId', 'profile.firstName profile.lastName email');
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found'
+      });
+    }
+
+    if (payment.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only pending payments can be approved'
+      });
+    }
+
+    // Update payment status
+    payment.status = 'completed';
+    payment.approvedBy = req.user._id;
+    payment.approvedAt = new Date();
+    
+    await payment.save();
+
+    // Update student payment info
+    await updateStudentPaymentInfo(payment.studentId);
+
+    // Log audit entry
+    await logAuditEntry(req.user._id, 'payment_approve', 'Payment', paymentId, {
+      paymentAmount: payment.amount,
+      studentId: payment.studentId,
+      teacherId: payment.teacherId
+    });
+
+    res.json({
+      success: true,
+      message: 'Payment approved successfully',
+      data: { payment }
+    });
+  } catch (error) {
+    console.error('Approve payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to approve payment',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Reject pending payment
+const rejectPayment = async (req, res) => {
+  try {
+    const paymentId = req.params.id;
+    const { reason } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rejection reason is required'
+      });
+    }
+    
+    const payment = await Payment.findById(paymentId)
+      .populate('studentId', 'personalInfo.firstName personalInfo.lastName personalInfo.email')
+      .populate('teacherId', 'profile.firstName profile.lastName email');
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Payment not found'
+      });
+    }
+
+    if (payment.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only pending payments can be rejected'
+      });
+    }
+
+    // Update payment status
+    payment.status = 'failed';
+    payment.rejectedBy = req.user._id;
+    payment.rejectedAt = new Date();
+    payment.rejectionReason = reason;
+    
+    await payment.save();
+
+    // Log audit entry
+    await logAuditEntry(req.user._id, 'payment_reject', 'Payment', paymentId, {
+      paymentAmount: payment.amount,
+      studentId: payment.studentId,
+      teacherId: payment.teacherId,
+      rejectionReason: reason
+    });
+
+    res.json({
+      success: true,
+      message: 'Payment rejected successfully',
+      data: { payment }
+    });
+  } catch (error) {
+    console.error('Reject payment error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to reject payment',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get pending payments
+const getPendingPayments = async (req, res) => {
+  try {
+    const { teacherId, studentId } = req.query;
+    
+    const query = { status: 'pending' };
+    
+    if (teacherId) {
+      query.teacherId = teacherId;
+    }
+    
+    if (studentId) {
+      query.studentId = studentId;
+    }
+
+    const payments = await Payment.find(query)
+      .populate('studentId', 'personalInfo.firstName personalInfo.lastName personalInfo.email')
+      .populate('teacherId', 'profile.firstName profile.lastName email')
+      .sort({ paymentDate: -1 });
+
+    res.json({
+      success: true,
+      data: {
+        payments,
+        count: payments.length
+      }
+    });
+  } catch (error) {
+    console.error('Get pending payments error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch pending payments',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   getPayments,
   getPayment,
@@ -740,5 +894,8 @@ module.exports = {
   getPaymentAnalytics,
   getOverduePayments,
   processRefund,
-  bulkCreatePayments
+  bulkCreatePayments,
+  approvePayment,
+  rejectPayment,
+  getPendingPayments
 };

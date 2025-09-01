@@ -44,6 +44,49 @@ router.post('/expenses', [
 ], accountingController.createExpense);
 
 /**
+ * @route   GET /api/accounting/expenses/:id
+ * @desc    Get single expense details
+ * @access  Private (Admin)
+ */
+router.get('/expenses/:id', accountingController.getExpenseById);
+
+/**
+ * @route   PUT /api/accounting/expenses/:id
+ * @desc    Update an expense
+ * @access  Private (Admin)
+ */
+router.put('/expenses/:id', [
+  body('category').optional().notEmpty().withMessage('Category cannot be empty'),
+  body('amount').optional().isFloat({ min: 0 }).withMessage('Amount must be a positive number'),
+  body('description').optional().notEmpty().withMessage('Description cannot be empty'),
+  body('expenseDate').optional().isISO8601().withMessage('Valid expense date is required'),
+  body('status').optional().isIn(['pending', 'approved', 'paid', 'rejected']).withMessage('Invalid status')
+], accountingController.updateExpense);
+
+/**
+ * @route   DELETE /api/accounting/expenses/:id
+ * @desc    Delete an expense
+ * @access  Private (Admin)
+ */
+router.delete('/expenses/:id', accountingController.deleteExpense);
+
+/**
+ * @route   PUT /api/accounting/expenses/:id/approve
+ * @desc    Approve an expense
+ * @access  Private (Admin)
+ */
+router.put('/expenses/:id/approve', accountingController.approveExpense);
+
+/**
+ * @route   PUT /api/accounting/expenses/:id/reject
+ * @desc    Reject an expense
+ * @access  Private (Admin)
+ */
+router.put('/expenses/:id/reject', [
+  body('reason').notEmpty().withMessage('Rejection reason is required')
+], accountingController.rejectExpense);
+
+/**
  * @route   POST /api/accounting/reports
  * @desc    Generate comprehensive financial report
  * @access  Private (Admin)

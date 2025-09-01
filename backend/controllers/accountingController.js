@@ -421,7 +421,7 @@ const getProfitLossSummary = async (req, res) => {
       {
         $match: {
           paymentDate: { $gte: start, $lte: end },
-          status: 'paid'
+          status: 'approved'
         }
       },
       {
@@ -788,6 +788,292 @@ const createExpense = async (req, res) => {
   }
 };
 
+/**
+ * Get single expense by ID
+ * @route GET /api/accounting/expenses/:id
+ * @access Private (Admin)
+ */
+const getExpenseById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const expense = await Expense.findById(id)
+      .populate('submittedBy', 'profile.firstName profile.lastName email')
+      .populate('approvedBy', 'profile.firstName profile.lastName email')
+      .populate('rejectedBy', 'profile.firstName profile.lastName email');
+
+    if (!expense) {
+      return res.status(404).json({
+        success: false,
+        message: 'Expense not found'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      data: {
+        expense
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching expense:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Update an expense
+ * @route PUT /api/accounting/expenses/:id
+ * @access Private (Admin)
+ */
+const updateExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { 
+      category, 
+      amount, 
+      description, 
+      expenseDate, 
+      status,
+      vendor,
+      invoiceNumber,
+      receiptUrl 
+    } = req.body;
+
+    // Find the expense
+    const expense = await Expense.findById(id);
+
+    if (!expense) {
+      return res.status(404).json({
+        success: false,
+        message: 'Expense not found'
+      });
+    }
+
+    // Validate category if provided
+    if (category) {
+      const validCategories = [
+        'rent', 'utilities', 'supplies', 'marketing', 'maintenance', 
+        'insurance', 'salaries', 'transportation', 'communication', 
+        'software', 'equipment', 'training', 'legal', 'accounting', 'other'
+      ];
+      if (!validCategories.includes(category)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid expense category'
+        });
+      }
+    }
+
+    // Update fields
+    if (category) expense.category = category;
+    if (amount) expense.amount = parseFloat(amount);
+    if (description) expense.description = description;
+    if (expenseDate) expense.date = new Date(expenseDate);
+    if (status) expense.status = status;
+    if (receiptUrl !== undefined) expense.receiptUrl = receiptUrl;
+
+    // Update notes with additional info
+    if (vendor || invoiceNumber) {
+      const noteParts = [];
+      if (vendor) noteParts.push(`Vendor: ${vendor}`);
+      if (invoiceNumber) noteParts.push(`Invoice: ${invoiceNumber}`);
+      expense.notes = noteParts.join(', ');
+    }
+
+    // If status changed to approved, set approval fields
+    if (status === 'approved' && expense.status !== 'approved') {
+      expense.approvedBy = req.user.id;
+      expense.approvedAt = new Date();
+    }
+
+    // Save expense
+    const updatedExpense = await expense.save();
+
+    // Populate the updated expense with user details
+    const populatedExpense = await Expense.findById(updatedExpense._id)
+      .populate('submittedBy', 'profile.firstName profile.lastName email')
+      .populate('approvedBy', 'profile.firstName profile.lastName email')
+      .populate('rejectedBy', 'profile.firstName profile.lastName email');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Expense updated successfully',
+      data: {
+        expense: populatedExpense
+      }
+    });
+
+  } catch (error) {
+    console.error('Error updating expense:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Delete an expense
+ * @route DELETE /api/accounting/expenses/:id
+ * @access Private (Admin)
+ */
+const deleteExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const expense = await Expense.findById(id);
+
+    if (!expense) {
+      return res.status(404).json({
+        success: false,
+        message: 'Expense not found'
+      });
+    }
+
+    // Only allow deletion of pending expenses
+    if (expense.status === 'approved') {
+      return res.status(400).json({
+        success: false,
+        message: 'Cannot delete approved expenses'
+      });
+    }
+
+    await Expense.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: 'Expense deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Error deleting expense:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Approve an expense
+ * @route PUT /api/accounting/expenses/:id/approve
+ * @access Private (Admin)
+ */
+const approveExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const expense = await Expense.findById(id);
+
+    if (!expense) {
+      return res.status(404).json({
+        success: false,
+        message: 'Expense not found'
+      });
+    }
+
+    if (expense.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only pending expenses can be approved'
+      });
+    }
+
+    // Use the expense model method to approve
+    expense.approve(req.user.id);
+    await expense.save();
+
+    // Populate the approved expense with user details
+    const populatedExpense = await Expense.findById(expense._id)
+      .populate('submittedBy', 'profile.firstName profile.lastName email')
+      .populate('approvedBy', 'profile.firstName profile.lastName email');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Expense approved successfully',
+      data: {
+        expense: populatedExpense
+      }
+    });
+
+  } catch (error) {
+    console.error('Error approving expense:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
+/**
+ * Reject an expense
+ * @route PUT /api/accounting/expenses/:id/reject
+ * @access Private (Admin)
+ */
+const rejectExpense = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { reason } = req.body;
+
+    if (!reason) {
+      return res.status(400).json({
+        success: false,
+        message: 'Rejection reason is required'
+      });
+    }
+
+    const expense = await Expense.findById(id);
+
+    if (!expense) {
+      return res.status(404).json({
+        success: false,
+        message: 'Expense not found'
+      });
+    }
+
+    if (expense.status !== 'pending') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only pending expenses can be rejected'
+      });
+    }
+
+    // Use the expense model method to reject
+    expense.reject(req.user.id, reason);
+    await expense.save();
+
+    // Populate the rejected expense with user details
+    const populatedExpense = await Expense.findById(expense._id)
+      .populate('submittedBy', 'profile.firstName profile.lastName email')
+      .populate('rejectedBy', 'profile.firstName profile.lastName email');
+
+    return res.status(200).json({
+      success: true,
+      message: 'Expense rejected successfully',
+      data: {
+        expense: populatedExpense
+      }
+    });
+
+  } catch (error) {
+    console.error('Error rejecting expense:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Server Error',
+      error: error.message
+    });
+  }
+};
+
 module.exports = {
   getStudentAccounting,
   getTeacherAccounting,
@@ -797,5 +1083,10 @@ module.exports = {
   getProfitLossSummary,
   getFinancialComparison,
   getCashFlow,
-  createExpense
+  createExpense,
+  getExpenseById,
+  updateExpense,
+  deleteExpense,
+  approveExpense,
+  rejectExpense
 };
