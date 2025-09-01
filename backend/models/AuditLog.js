@@ -34,16 +34,6 @@ const auditLogSchema = new mongoose.Schema({
   },
   ipAddress: {
     type: String,
-    validate: {
-      validator: function(value) {
-        if (!value) return true;
-        // Basic IP validation (IPv4 and IPv6)
-        const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-        const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$/;
-        return ipv4Regex.test(value) || ipv6Regex.test(value) || value === '::1' || value === 'localhost';
-      },
-      message: 'Invalid IP address format'
-    }
   },
   userAgent: {
     type: String,
