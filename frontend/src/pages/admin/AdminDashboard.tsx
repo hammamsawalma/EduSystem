@@ -287,7 +287,7 @@ const AdminDashboard: React.FC = () => {
                     </div>
                     <button 
                       className="btn btn-warning btn-sm"
-                      onClick={() => navigate('/teachers')}
+                      onClick={() => navigate('/accounting')}
                     >
                       Review
                     </button>

@@ -1,9 +1,11 @@
 import React from 'react';
-import { Users, DollarSign, Clock, TrendingUp, Calendar, Plus } from 'lucide-react';
+import { Users, DollarSign, Clock, TrendingUp, FileText } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { useTeacherDashboardStats } from '../../hooks/useTeacherDashboardStats';
 import { formatCurrency } from '../../utils/currency';
 
 const TeacherDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const { 
     myStudents, 
     dailyStats,
@@ -226,21 +228,33 @@ const TeacherDashboard: React.FC = () => {
             <h3 className="text-lg font-semibold text-gray-900">Quick Actions</h3>
           </div>
           <div className="grid grid-cols-2 gap-4">
-            <button className="btn btn-primary flex items-center justify-center">
-              <Plus className="w-4 h-4 mr-2" />
-              Add Student
+            <button 
+              onClick={() => navigate('/students')}
+              className="btn btn-primary flex items-center justify-center"
+            >
+              <Users className="w-4 h-4 mr-2" />
+              View Students
             </button>
-            <button className="btn btn-secondary flex items-center justify-center">
+            <button 
+              onClick={() => navigate('/time-tracking')}
+              className="btn btn-secondary flex items-center justify-center"
+            >
               <Clock className="w-4 h-4 mr-2" />
               Log Time
             </button>
-            <button className="btn btn-success flex items-center justify-center">
-              <Calendar className="w-4 h-4 mr-2" />
-              Schedule
-            </button>
-            <button className="btn btn-warning flex items-center justify-center">
-              <TrendingUp className="w-4 h-4 mr-2" />
+            <button 
+              onClick={() => navigate('/reports')}
+              className="btn btn-success flex items-center justify-center"
+            >
+              <FileText className="w-4 h-4 mr-2" />
               Reports
+            </button>
+            <button 
+              onClick={() => navigate('/financial')}
+              className="btn btn-warning flex items-center justify-center"
+            >
+              <DollarSign className="w-4 h-4 mr-2" />
+              Financial
             </button>
           </div>
         </div>
