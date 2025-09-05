@@ -40,6 +40,17 @@ const classSchema = new mongoose.Schema({
       message: 'Currency must be a valid 3-letter currency code'
     }
   },
+  price: {
+    type: Number,
+    default: 0,
+    min: [0, 'Price must be non-negative'],
+    validate: {
+      validator: function(value) {
+        return Number.isFinite(value) && value >= 0;
+      },
+      message: 'Price must be a valid non-negative number'
+    }
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -73,6 +84,11 @@ classSchema.pre('save', async function(next) {
 // Virtual for formatted rate
 classSchema.virtual('formattedRate').get(function() {
   return `${this.currency} ${this.hourlyRate.toFixed(2)}`;
+});
+
+// Virtual for formatted price
+classSchema.virtual('formattedPrice').get(function() {
+  return `${this.currency} ${this.price.toFixed(2)}`;
 });
 
 module.exports = mongoose.model('Class', classSchema);

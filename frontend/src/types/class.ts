@@ -12,6 +12,7 @@ export interface Class {
   description?: string;
   hourlyRate: number;
   currency: string;
+  price: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -23,6 +24,7 @@ export interface CreateClassData {
   description?: string;
   hourlyRate: number;
   currency: string;
+  price?: number;
   isActive: boolean;
 }
 
@@ -31,6 +33,7 @@ export interface UpdateClassData {
   description?: string;
   hourlyRate?: number;
   currency?: string;
+  price?: number;
   isActive?: boolean;
 }
 

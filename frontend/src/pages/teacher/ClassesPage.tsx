@@ -29,6 +29,7 @@ interface ClassFormData {
   description: string;
   hourlyRate: number;
   currency: string;
+  price: number;
   isActive: boolean;
   teacherId?: string;
 }
@@ -57,6 +58,7 @@ const ClassesPage: React.FC = () => {
     description: '',
     hourlyRate: 0,
     currency: 'DZD',
+    price: 0,
     isActive: true,
     teacherId: user?.role === 'admin' ? '' : user?.id || ''
   });
@@ -67,6 +69,7 @@ const ClassesPage: React.FC = () => {
     description?: string;
     hourlyRate?: string;
     currency?: string;
+    price?: string;
     teacherId?: string;
   }>({});
 
@@ -105,6 +108,7 @@ const ClassesPage: React.FC = () => {
       description: '',
       hourlyRate: 0,
       currency: 'DZD',
+      price: 0,
       isActive: true,
       teacherId: user?.role === 'admin' ? '' : user?.id || ''
     });
@@ -117,6 +121,7 @@ const ClassesPage: React.FC = () => {
       description?: string;
       hourlyRate?: string;
       currency?: string;
+      price?: string;
       teacherId?: string;
     } = {};
 
@@ -132,6 +137,10 @@ const ClassesPage: React.FC = () => {
       errors.currency = 'Currency is required';
     }
 
+    if (formData.price < 0) {
+      errors.price = 'Price must be non-negative';
+    }
+
     if (user?.role === 'admin' && !formData.teacherId) {
       errors.teacherId = 'Please select a teacher';
     }
@@ -144,14 +153,21 @@ const ClassesPage: React.FC = () => {
     if (!validateForm()) return;
 
     try {
-      await dispatch(createClass({
+      const createData: any = {
         teacherId: formData.teacherId || user?.id || '',
         name: formData.name.trim(),
         description: formData.description.trim(),
         hourlyRate: formData.hourlyRate,
         currency: formData.currency,
         isActive: formData.isActive
-      })).unwrap();
+      };
+
+      // Only include price if user is admin
+      if (user?.role === 'admin') {
+        createData.price = formData.price;
+      }
+
+      await dispatch(createClass(createData)).unwrap();
 
       setShowCreateModal(false);
       resetForm();
@@ -164,15 +180,22 @@ const ClassesPage: React.FC = () => {
     if (!selectedClass || !validateForm()) return;
 
     try {
+      const updateData: any = {
+        name: formData.name.trim(),
+        description: formData.description.trim(),
+        hourlyRate: formData.hourlyRate,
+        currency: formData.currency,
+        isActive: formData.isActive
+      };
+
+      // Only include price if user is admin
+      if (user?.role === 'admin') {
+        updateData.price = formData.price;
+      }
+
       await dispatch(updateClass({
         id: selectedClass._id,
-        data: {
-          name: formData.name.trim(),
-          description: formData.description.trim(),
-          hourlyRate: formData.hourlyRate,
-          currency: formData.currency,
-          isActive: formData.isActive
-        }
+        data: updateData
       })).unwrap();
 
       setShowEditModal(false);
@@ -202,6 +225,7 @@ const ClassesPage: React.FC = () => {
       description: classItem.description || '',
       hourlyRate: classItem.hourlyRate,
       currency: classItem.currency,
+      price: classItem.price || 0,
       isActive: classItem.isActive,
       teacherId: classItem.teacherId._id
     });
@@ -369,6 +393,9 @@ const ClassesPage: React.FC = () => {
                     <th className="table-header-cell">Teacher</th>
                   )}
                   <th className="table-header-cell">Hourly Rate</th>
+                  {user?.role === 'admin' && (
+                    <th className="table-header-cell">Class Price</th>
+                  )}
                   <th className="table-header-cell">Status</th>
                   <th className="table-header-cell">Created</th>
                   <th className="table-header-cell">Actions</th>
@@ -402,6 +429,15 @@ const ClassesPage: React.FC = () => {
                         </span>
                       </div>
                     </td>
+                    {user?.role === 'admin' && (
+                      <td className="table-cell">
+                        <div className="flex items-center gap-1">
+                          <span className="font-semibold text-primary-600">
+                            {formatCurrency(classItem.price || 0, classItem.currency)}
+                          </span>
+                        </div>
+                      </td>
+                    )}
                     <td className="table-cell">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                         classItem.isActive
@@ -550,8 +586,8 @@ const ClassesPage: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Hourly Rate and Currency */}
-                  <div className="grid grid-cols-2 gap-4">
+                  {/* Hourly Rate, Price, and Currency */}
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
                       <label className="form-label">
                         Hourly Rate *
@@ -569,6 +605,29 @@ const ClassesPage: React.FC = () => {
                         <p className="form-error">{formErrors.hourlyRate}</p>
                       )}
                     </div>
+
+                    {user?.role === 'admin' && (
+                      <div>
+                        <label className="form-label">
+                          Class Price
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={formData.price}
+                          onChange={(e) => handleFormChange('price', parseFloat(e.target.value) || 0)}
+                          className={`form-input ${formErrors.price ? 'border-red-300 focus:border-red-500 focus:ring-red-500' : ''}`}
+                          placeholder="0.00"
+                        />
+                        {formErrors.price && (
+                          <p className="form-error">{formErrors.price}</p>
+                        )}
+                        <p className="text-xs text-gray-500 mt-1">
+                          Amount students need to pay
+                        </p>
+                      </div>
+                    )}
 
                     <div>
                       <label className="form-label">

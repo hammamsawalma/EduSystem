@@ -90,7 +90,8 @@ const createClass = async (req, res) => {
       hourlyRate,
       currency,
       teacherId,
-      isActive
+      isActive,
+      price
     } = req.body;
 
     // Validate required fields
@@ -107,6 +108,24 @@ const createClass = async (req, res) => {
         success: false,
         message: 'Hourly rate must be greater than 0.'
       });
+    }
+
+    // Validate price (only admins can set price)
+    let finalPrice = 0;
+    if (price !== undefined) {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Only admins can set class price.'
+        });
+      }
+      if (price < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Price must be non-negative.'
+        });
+      }
+      finalPrice = Number(price);
     }
 
     // Determine the teacher ID (admin can specify, teacher uses their own)
@@ -126,6 +145,7 @@ const createClass = async (req, res) => {
       description: description?.trim(),
       hourlyRate: Number(hourlyRate),
       currency: currency || 'DZD',
+      price: finalPrice,
       isActive: isActive !== undefined ? isActive : true
     });
 
@@ -184,7 +204,8 @@ const updateClass = async (req, res) => {
       description,
       hourlyRate,
       currency,
-      isActive
+      isActive,
+      price
     } = req.body;
 
     // Validate hourly rate if provided
@@ -195,12 +216,29 @@ const updateClass = async (req, res) => {
       });
     }
 
+    // Validate and handle price update (admin only)
+    if (price !== undefined) {
+      if (req.user.role !== 'admin') {
+        return res.status(403).json({
+          success: false,
+          message: 'Only admins can update class price.'
+        });
+      }
+      if (price < 0) {
+        return res.status(400).json({
+          success: false,
+          message: 'Price must be non-negative.'
+        });
+      }
+    }
+
     // Update fields
     if (name !== undefined) classItem.name = name.trim();
     if (description !== undefined) classItem.description = description?.trim();
     if (hourlyRate !== undefined) classItem.hourlyRate = Number(hourlyRate);
     if (currency !== undefined) classItem.currency = currency;
     if (isActive !== undefined) classItem.isActive = isActive;
+    if (price !== undefined) classItem.price = Number(price);
 
     await classItem.save();
 
