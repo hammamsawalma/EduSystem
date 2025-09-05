@@ -5,11 +5,6 @@ import { accountingService } from '../../../services/accountingService';
 import TeacherPaymentModal from './modals/TeacherPaymentModal';
 import TeacherDetailModal from './modals/TeacherDetailModal';
 
-interface DateRange {
-  start: string;
-  end: string;
-}
-
 interface Teacher {
   teacher: {
     _id: string;
@@ -44,11 +39,7 @@ interface TeacherAccountingData {
   teacherCount: number;
 }
 
-interface TeacherAccountingTabProps {
-  dateRange: DateRange;
-}
-
-const TeacherAccountingTab: React.FC<TeacherAccountingTabProps> = ({ dateRange }) => {
+const TeacherAccountingTab: React.FC = () => {
   const [data, setData] = useState<TeacherAccountingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddPayment, setShowAddPayment] = useState(false);
@@ -59,10 +50,7 @@ const TeacherAccountingTab: React.FC<TeacherAccountingTabProps> = ({ dateRange }
   const fetchTeacherAccounting = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await accountingService.getTeacherAccounting({
-        startDate: dateRange.start,
-        endDate: dateRange.end
-      });
+      const response = await accountingService.getTeacherAccounting();
 
       if (response.data) {
         setData(response.data);
@@ -72,7 +60,7 @@ const TeacherAccountingTab: React.FC<TeacherAccountingTabProps> = ({ dateRange }
     } finally {
       setLoading(false);
     }
-  }, [dateRange.start, dateRange.end]);
+  }, []);
 
   useEffect(() => {
     fetchTeacherAccounting();

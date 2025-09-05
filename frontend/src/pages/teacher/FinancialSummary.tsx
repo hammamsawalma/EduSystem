@@ -85,7 +85,7 @@ const FinancialSummary: React.FC = () => {
   const hoursChange = weeklyHours > 0 ? 8.3 : 0; // This would need historical data
 
   // Recent expenses (last 5)
-  const recentExpenses = expenses
+  const recentExpenses = [...expenses]
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
     .slice(0, 5);
 

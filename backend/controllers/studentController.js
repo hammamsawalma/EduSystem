@@ -654,7 +654,7 @@ const getStudentAccounting = async (req, res) => {
     
     const student = await Student.findOne(query)
       .populate('teacherId', 'profile.firstName profile.lastName email')
-      .populate('assignedClasses.classId', 'name hourlyRate currency');
+      .populate('assignedClasses.classId', 'name price hourlyRate currency');
 
     if (!student) {
       return res.status(404).json({
@@ -668,6 +668,11 @@ const getStudentAccounting = async (req, res) => {
     const payments = await Payment.find({ studentId })
       .populate('teacherId', 'profile.firstName profile.lastName email')
       .sort({ paymentDate: -1 });
+
+    // Calculate total class prices for this student
+    const totalClassPrices = student.assignedClasses?.reduce((sum, assignedClass) => {
+      return sum + (assignedClass.classId?.price || 0);
+    }, 0) || 0;
 
     // Calculate financial summary
     const completedPayments = payments.filter(p => p.status === 'completed');
@@ -683,8 +688,8 @@ const getStudentAccounting = async (req, res) => {
     const overduePayments = pendingPayments.filter(p => p.dueDate && new Date(p.dueDate) < now);
     const totalOverdue = overduePayments.reduce((sum, p) => sum + p.amount, 0);
     
-    // Estimate total fee (this would be calculated based on classes/lessons)
-    const estimatedTotalFee = totalPaid + totalPending;
+    // Use class prices as the total fees (this is what the student should pay)
+    const estimatedTotalFee = totalClassPrices;
     const remainingBalance = Math.max(0, estimatedTotalFee - totalPaid);
 
     const studentDetail = {
@@ -704,6 +709,11 @@ const getStudentAccounting = async (req, res) => {
         totalOverdue,
         totalFailed,
         remainingBalance,
+        totalClassPrices,
+        remainingFromClasses: Math.max(0, totalClassPrices - totalPaid - totalPending),
+        // Additional breakdown for better understanding
+        paidPercentage: totalClassPrices > 0 ? Math.round((totalPaid / totalClassPrices) * 100) : 0,
+        pendingPercentage: totalClassPrices > 0 ? Math.round((totalPending / totalClassPrices) * 100) : 0,
         paymentHistory: payments.map(payment => ({
           _id: payment._id,
           amount: payment.amount,

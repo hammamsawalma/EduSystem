@@ -5,6 +5,7 @@ const User = require('../models/User');
 const Expense = require('../models/Expense');
 const FinancialReport = require('../models/FinancialReport');
 const TimeEntry = require('../models/TimeEntry');
+const Class = require('../models/Class');
 
 /**
  * Get student accounting overview (revenues)
@@ -13,10 +14,7 @@ const TimeEntry = require('../models/TimeEntry');
  */
 const getStudentAccounting = async (req, res) => {
   try {
-    const { startDate, endDate, teacherId } = req.query;
-    
-    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), 0, 1);
-    const end = endDate ? new Date(endDate) : new Date();
+    const { teacherId } = req.query;
     
     // Build student query
     const studentQuery = { status: 'active' };
@@ -27,18 +25,21 @@ const getStudentAccounting = async (req, res) => {
     // Get all active students
     const students = await Student.find(studentQuery)
       .populate('teacherId', 'profile.firstName profile.lastName email')
+      .populate('assignedClasses.classId', 'name price currency hourlyRate')
       .lean();
-    
+
     // Get payment data for each student
     const studentAccounting = await Promise.all(
       students.map(async (student) => {
-        // Get payments for this student in the period
+        // Calculate total class prices for this student
+        const totalClassPrices = student.assignedClasses?.reduce((sum, assignedClass) => {
+          return sum + (assignedClass.classId?.price || 0);
+        }, 0) || 0;
+
+        // Get payments for this student (all payments, no date filter)
         const payments = await Payment.find({
-          studentId: student._id,
-          paymentDate: { $gte: start, $lte: end }
-        }).lean();
-        
-        // Calculate totals
+          studentId: student._id
+        }).lean();        // Calculate totals
         const totalPaid = payments
           .filter(p => p.status === 'completed')
           .reduce((sum, p) => sum + p.amount, 0);
@@ -51,11 +52,10 @@ const getStudentAccounting = async (req, res) => {
           .filter(p => p.status === 'pending' && p.dueDate && new Date(p.dueDate) < new Date())
           .reduce((sum, p) => sum + p.amount, 0);
         
-        // For this example, assume each student has a total fee
-        // This could be enhanced to track actual enrollment fees
-        const estimatedTotalFee = totalPaid + totalPending; // Estimate
+        // Use class prices as the total fees (this is what the student should pay)
+        const estimatedTotalFee = totalClassPrices;
         const remainingBalance = Math.max(0, estimatedTotalFee - totalPaid);
-        
+
         return {
           student: {
             _id: student._id,
@@ -63,7 +63,14 @@ const getStudentAccounting = async (req, res) => {
             email: student.email,
             level: student.level,
             enrollmentDate: student.enrollmentDate,
-            teacher: student.teacherId
+            teacher: student.teacherId,
+            assignedClasses: student.assignedClasses?.map(ac => ({
+              classId: ac.classId?._id,
+              className: ac.classId?.name,
+              price: ac.classId?.price,
+              currency: ac.classId?.currency,
+              assignedAt: ac.assignedAt
+            })) || []
           },
           financials: {
             estimatedTotalFee,
@@ -71,7 +78,12 @@ const getStudentAccounting = async (req, res) => {
             totalPending,
             totalOverdue,
             remainingBalance,
-            paymentHistory: payments.length
+            paymentHistory: payments.length,
+            totalClassPrices,
+            remainingFromClasses: Math.max(0, totalClassPrices - totalPaid - totalPending),
+            // Additional breakdown for better understanding
+            paidPercentage: totalClassPrices > 0 ? Math.round((totalPaid / totalClassPrices) * 100) : 0,
+            pendingPercentage: totalClassPrices > 0 ? Math.round((totalPending / totalClassPrices) * 100) : 0
           }
         };
       })
@@ -94,7 +106,6 @@ const getStudentAccounting = async (req, res) => {
       data: {
         students: studentAccounting,
         totals: overallTotals,
-        period: { start, end },
         studentCount: studentAccounting.length
       }
     });
@@ -116,11 +127,6 @@ const getStudentAccounting = async (req, res) => {
  */
 const getTeacherAccounting = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-    
-    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), 0, 1);
-    const end = endDate ? new Date(endDate) : new Date();
-    
     // Get ALL teachers (users with role 'teacher')
     const allTeachers = await User.find({ role: 'teacher' })
       .select('_id email profile')
@@ -129,10 +135,9 @@ const getTeacherAccounting = async (req, res) => {
     // Get accounting data for each teacher
     const teachersAccounting = await Promise.all(
       allTeachers.map(async (teacher) => {
-        // Get time entries for this teacher in the period
+        // Get time entries for this teacher (all time entries, no date filter)
         const timeEntries = await TimeEntry.find({
-          teacherId: teacher._id,
-          date: { $gte: start, $lte: end }
+          teacherId: teacher._id
         }).lean();
         
         // Calculate hours and earnings from time entries
@@ -146,15 +151,14 @@ const getTeacherAccounting = async (req, res) => {
           totalEarnings += hours * rate;
         });
         
-        // Get payments made to this teacher
+        // Get payments made to this teacher (all payments, no date filter)
         const teacherPayments = await TeacherPayment.find({
-          teacherId: teacher._id,
-          createdAt: { $gte: start, $lte: end }
+          teacherId: teacher._id
         }).lean();
         
         // Calculate payment totals
         const totalPaid = teacherPayments
-          .filter(p => p.status === 'paid')
+          .filter(p => p.status === 'paid' || p.status === 'approved')
           .reduce((sum, p) => sum + p.amount, 0);
         
         const totalPending = teacherPayments
@@ -205,7 +209,6 @@ const getTeacherAccounting = async (req, res) => {
       data: {
         teachers: teachersAccounting,
         totals: teacherTotals,
-        period: { start, end },
         teacherCount: teachersAccounting.length
       }
     });
@@ -227,14 +230,10 @@ const getTeacherAccounting = async (req, res) => {
  */
 const getGeneralExpenses = async (req, res) => {
   try {
-    const { startDate, endDate, category, status = 'approved' } = req.query;
+    const { category, status = 'approved' } = req.query;
     
-    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), 0, 1);
-    const end = endDate ? new Date(endDate) : new Date();
-    
-    // Build expense query
+    // Build expense query (no date filtering)
     const expenseQuery = {
-      date: { $gte: start, $lte: end },
       status
     };
     
@@ -262,7 +261,7 @@ const getGeneralExpenses = async (req, res) => {
       { $sort: { totalAmount: -1 } }
     ]);
     
-    // Calculate monthly breakdown
+    // Calculate monthly breakdown (all time)
     const monthlyExpenses = await Expense.aggregate([
       { $match: expenseQuery },
       {
@@ -293,8 +292,7 @@ const getGeneralExpenses = async (req, res) => {
         expenses,
         byCategory: expensesByCategory,
         monthlyBreakdown: monthlyExpenses,
-        totals,
-        period: { start, end }
+        totals
       }
     });
     
@@ -394,16 +392,10 @@ const getFinancialReports = async (req, res) => {
  */
 const getProfitLossSummary = async (req, res) => {
   try {
-    const { startDate, endDate } = req.query;
-    
-    const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), 0, 1);
-    const end = endDate ? new Date(endDate) : new Date();
-    
-    // Get student revenue
+    // Get student revenue (all completed payments)
     const studentRevenue = await Payment.aggregate([
       {
         $match: {
-          paymentDate: { $gte: start, $lte: end },
           status: 'completed'
         }
       },
@@ -416,11 +408,10 @@ const getProfitLossSummary = async (req, res) => {
       }
     ]);
     
-    // Get teacher expenses
+    // Get teacher expenses (all approved payments)
     const teacherExpenses = await TeacherPayment.aggregate([
       {
         $match: {
-          paymentDate: { $gte: start, $lte: end },
           status: 'approved'
         }
       },
@@ -433,11 +424,10 @@ const getProfitLossSummary = async (req, res) => {
       }
     ]);
     
-    // Get general expenses
+    // Get general expenses (all approved/paid expenses)
     const generalExpenses = await Expense.aggregate([
       {
         $match: {
-          date: { $gte: start, $lte: end },
           status: { $in: ['approved', 'paid'] }
         }
       },
@@ -457,11 +447,10 @@ const getProfitLossSummary = async (req, res) => {
     const netIncome = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? (netIncome / totalRevenue) * 100 : 0;
     
-    // Get breakdown by category
+    // Get breakdown by category (all approved expenses)
     const expenseBreakdown = await Expense.aggregate([
       {
         $match: {
-          date: { $gte: start, $lte: end },
           status: 'approved'
         }
       },
@@ -476,7 +465,6 @@ const getProfitLossSummary = async (req, res) => {
     ]);
     
     const summary = {
-      period: { start, end },
       revenue: {
         studentPayments: totalRevenue,
         otherIncome: 0, // Can be expanded

@@ -88,7 +88,7 @@ classSchema.virtual('formattedRate').get(function() {
 
 // Virtual for formatted price
 classSchema.virtual('formattedPrice').get(function() {
-  return `${this.currency} ${this.price.toFixed(2)}`;
+  return `${this.currency} ${this.price?.toFixed(2) || '0.00'}`;
 });
 
 module.exports = mongoose.model('Class', classSchema);

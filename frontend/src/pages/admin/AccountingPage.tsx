@@ -18,18 +18,11 @@ const AccountingPage: React.FC = () => {
   const [summary, setSummary] = useState<ProfitLossSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('students');
-  const [dateRange, setDateRange] = useState({
-    start: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    end: new Date().toISOString().split('T')[0]
-  });
 
   const fetchFinancialSummary = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await accountingService.getProfitLossSummary({
-        startDate: dateRange.start,
-        endDate: dateRange.end
-      });
+      const response = await accountingService.getProfitLossSummary();
       if (response.data) {
         setSummary(response.data);
       }
@@ -38,7 +31,7 @@ const AccountingPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [dateRange.start, dateRange.end]);  
+  }, []);  
   useEffect(() => {
     fetchFinancialSummary();
   }, [fetchFinancialSummary]);
@@ -74,22 +67,6 @@ const AccountingPage: React.FC = () => {
         </div>
         
         <div className="flex gap-3">
-          <div className="flex gap-2">
-            <input
-              type="date"
-              value={dateRange.start}
-              onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-            />
-            <span className="flex items-center text-gray-500">to</span>
-            <input
-              type="date"
-              value={dateRange.end}
-              onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-            />
-          </div>
-          
           <button 
             onClick={() => handleTabChange('reports')}
             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2"
@@ -125,10 +102,10 @@ const AccountingPage: React.FC = () => {
         </div>
 
         <div className="p-6">
-          {activeTab === 'students' && <StudentAccountingTab dateRange={dateRange} />}
-          {activeTab === 'teachers' && <TeacherAccountingTab dateRange={dateRange} />}
-          {activeTab === 'expenses' && <ExpensesTab dateRange={dateRange} />}
-          {activeTab === 'profit-loss' && <ProfitLossTab dateRange={dateRange} />}
+          {activeTab === 'students' && <StudentAccountingTab />}
+          {activeTab === 'teachers' && <TeacherAccountingTab />}
+          {activeTab === 'expenses' && <ExpensesTab />}
+          {activeTab === 'profit-loss' && <ProfitLossTab />}
         </div>
       </div>
     </div>

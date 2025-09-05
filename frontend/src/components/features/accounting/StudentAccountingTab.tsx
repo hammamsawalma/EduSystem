@@ -5,11 +5,6 @@ import { accountingService } from '../../../services/accountingService';
 import StudentPaymentModal from './modals/StudentPaymentModal';
 import StudentDetailModal from './modals/StudentDetailModal';
 
-interface DateRange {
-  start: string;
-  end: string;
-}
-
 interface Student {
   student: {
     _id: string;
@@ -46,11 +41,7 @@ interface StudentAccountingData {
   studentCount: number;
 }
 
-interface StudentAccountingTabProps {
-  dateRange: DateRange;
-}
-
-const StudentAccountingTab: React.FC<StudentAccountingTabProps> = ({ dateRange }) => {
+const StudentAccountingTab: React.FC = () => {
   const [data, setData] = useState<StudentAccountingData | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddPayment, setShowAddPayment] = useState(false);
@@ -61,10 +52,7 @@ const StudentAccountingTab: React.FC<StudentAccountingTabProps> = ({ dateRange }
   const fetchStudentAccounting = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await accountingService.getStudentAccounting({
-        startDate: dateRange.start,
-        endDate: dateRange.end
-      });
+      const response = await accountingService.getStudentAccounting();
 
       if (response.data) {
         setData(response.data);
@@ -74,11 +62,11 @@ const StudentAccountingTab: React.FC<StudentAccountingTabProps> = ({ dateRange }
     } finally {
       setLoading(false);
     }
-  }, [dateRange.start, dateRange.end]);
+  }, []);
 
   useEffect(() => {
     fetchStudentAccounting();
-  }, [dateRange, fetchStudentAccounting]);
+  }, [fetchStudentAccounting]);
 
   const getPaymentStatus = (student: Student) => {
     if (student.financials.totalOverdue > 0) {

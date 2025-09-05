@@ -3,16 +3,7 @@ import { TrendingUp, TrendingDown, DollarSign, BarChart3 } from 'lucide-react';
 import { formatCurrency } from '../../../utils/currency';
 import { accountingService } from '../../../services/accountingService';
 
-interface DateRange {
-  start: string;
-  end: string;
-}
-
 interface ProfitLossData {
-  period: {
-    start: string;
-    end: string;
-  };
   revenue: {
     studentPayments: number;
     otherIncome: number;
@@ -38,21 +29,14 @@ interface ProfitLossData {
   };
 }
 
-interface ProfitLossTabProps {
-  dateRange: DateRange;
-}
-
-const ProfitLossTab: React.FC<ProfitLossTabProps> = ({ dateRange }) => {
+const ProfitLossTab: React.FC = () => {
   const [data, setData] = useState<ProfitLossData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfitLossData = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await accountingService.getProfitLossSummary({
-        startDate: dateRange.start,
-        endDate: dateRange.end
-      });
+      const response = await accountingService.getProfitLossSummary();
 
       if (response.data) {
         setData(response.data);
@@ -62,7 +46,9 @@ const ProfitLossTab: React.FC<ProfitLossTabProps> = ({ dateRange }) => {
     } finally {
       setLoading(false);
     }
-  }, [dateRange.start, dateRange.end]);  useEffect(() => {
+  }, []);
+
+  useEffect(() => {
     fetchProfitLossData();
   }, [fetchProfitLossData]);
 
@@ -100,7 +86,7 @@ const ProfitLossTab: React.FC<ProfitLossTabProps> = ({ dateRange }) => {
       <div className="text-center">
         <h2 className="text-2xl font-bold text-gray-900">Profit & Loss Statement</h2>
         <p className="text-gray-600 mt-2">
-          {new Date(data.period.start).toLocaleDateString()} - {new Date(data.period.end).toLocaleDateString()}
+          All Time Summary
         </p>
       </div>
 

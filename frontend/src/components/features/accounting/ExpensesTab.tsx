@@ -15,16 +15,7 @@ import type { GeneralExpensesResponse } from "../../../types/accounting";
 import ExpenseModal from "./modals/ExpenseModal";
 import ViewExpenseModal from "./modals/ViewExpenseModal";
 
-interface DateRange {
-  start: string;
-  end: string;
-}
-
-interface ExpensesTabProps {
-  dateRange: DateRange;
-}
-
-const ExpensesTab: React.FC<ExpensesTabProps> = ({ dateRange }) => {
+const ExpensesTab: React.FC = () => {
   const [data, setData] = useState<GeneralExpensesResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [showAddExpense, setShowAddExpense] = useState(false);
@@ -36,8 +27,6 @@ const ExpensesTab: React.FC<ExpensesTabProps> = ({ dateRange }) => {
     try {
       setLoading(true);
       const response = await accountingService.getGeneralExpenses({
-        startDate: dateRange.start,
-        endDate: dateRange.end,
         status: filter,
       });
 
@@ -49,7 +38,7 @@ const ExpensesTab: React.FC<ExpensesTabProps> = ({ dateRange }) => {
     } finally {
       setLoading(false);
     }
-  }, [dateRange.start, dateRange.end, filter]);
+  }, [filter]);
 
   useEffect(() => {
     fetchExpenses();

@@ -100,8 +100,6 @@ export const teacherService = {
 export const accountingService = {
   // Get student accounting (revenues)
   getStudentAccounting: async (params?: {
-    startDate?: string;
-    endDate?: string;
     teacherId?: string;
   }): Promise<ApiResponse<StudentAccountingResponse>> => {
     const response = await api.get('/accounting/students', { params });
@@ -109,18 +107,13 @@ export const accountingService = {
   },
 
   // Get teacher accounting (expenses)
-  getTeacherAccounting: async (params?: {
-    startDate?: string;
-    endDate?: string;
-  }): Promise<ApiResponse<TeacherAccountingResponse>> => {
-    const response = await api.get('/accounting/teachers', { params });
+  getTeacherAccounting: async (): Promise<ApiResponse<TeacherAccountingResponse>> => {
+    const response = await api.get('/accounting/teachers');
     return response.data;
   },
 
   // Get general expenses
   getGeneralExpenses: async (params?: {
-    startDate?: string;
-    endDate?: string;
     category?: string;
     status?: string;
   }): Promise<ApiResponse<GeneralExpensesResponse>> => {
@@ -147,11 +140,8 @@ export const accountingService = {
   },
 
   // Get profit/loss summary
-  getProfitLossSummary: async (params?: {
-    startDate?: string;
-    endDate?: string;
-  }): Promise<ApiResponse<ProfitLossSummary>> => {
-    const response = await api.get('/accounting/profit-loss', { params });
+  getProfitLossSummary: async (): Promise<ApiResponse<ProfitLossSummary>> => {
+    const response = await api.get('/accounting/profit-loss');
     return response.data;
   },
 
