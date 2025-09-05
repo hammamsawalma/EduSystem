@@ -1,6 +1,7 @@
 import api from './api';
 import type { Class, CreateClassData, UpdateClassData, AssignStudentsToClassData } from '../types/class';
 import type { Student } from '../types/student';
+import type { AttendanceRecord } from './attendanceService';
 
 export interface ClassesResponse {
   success: boolean;
@@ -22,6 +23,44 @@ export interface ClassStudentsResponse {
   data: {
     students: Student[];
     count: number;
+  };
+}
+
+export interface StudentWithAttendance extends Student {
+  attendance: {
+    records: AttendanceRecord[];
+    statistics: {
+      totalSessions: number;
+      presentSessions: number;
+      absentSessions: number;
+      lateSessions: number;
+      makeupSessions: number;
+      cancelledSessions: number;
+      attendanceRate: number;
+    };
+  };
+}
+
+export interface ClassStudentsAttendanceResponse {
+  success: boolean;
+  data: {
+    class: {
+      _id: string;
+      name: string;
+      description?: string;
+      teacherId: string;
+    };
+    students: StudentWithAttendance[];
+    classStatistics: {
+      totalStudents: number;
+      totalSessions: number;
+      averageAttendanceRate: number;
+    };
+    filters: {
+      startDate: string | null;
+      endDate: string | null;
+      status: string;
+    };
   };
 }
 
@@ -67,6 +106,27 @@ export const classService = {
   getClassStudents: async (classId: string): Promise<Student[]> => {
     const response = await api.get<ClassStudentsResponse>(`/classes/${classId}/students`);
     return response.data.data.students;
+  },
+
+  // Get students assigned to a class with attendance information
+  getClassStudentsAttendance: async (
+    classId: string,
+    filters?: {
+      startDate?: string;
+      endDate?: string;
+      status?: string;
+    }
+  ): Promise<ClassStudentsAttendanceResponse['data']> => {
+    const params: any = {};
+    if (filters?.startDate) params.startDate = filters.startDate;
+    if (filters?.endDate) params.endDate = filters.endDate;
+    if (filters?.status) params.status = filters.status;
+    
+    const response = await api.get<ClassStudentsAttendanceResponse>(
+      `/classes/${classId}/students/attendance`,
+      { params }
+    );
+    return response.data.data;
   },
 
   // Remove student from class (admin only)

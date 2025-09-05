@@ -38,6 +38,11 @@ export interface CreateTimeEntryData {
   hoursWorked: number;
   description?: string;
   classId: string;
+  attendance?: {
+    studentId: string;
+    status: 'present' | 'absent' | 'late' | 'makeup' | 'cancelled';
+    notes?: string;
+  }[];
 }
 
 export interface UpdateTimeEntryData {
@@ -46,6 +51,11 @@ export interface UpdateTimeEntryData {
   hoursWorked?: number;
   description?: string;
   classId?: string;
+  attendance?: {
+    studentId: string;
+    status: 'present' | 'absent' | 'late' | 'makeup' | 'cancelled';
+    notes?: string;
+  }[];
 }
 
 export interface TimeEntriesResponse {

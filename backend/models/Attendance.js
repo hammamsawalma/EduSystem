@@ -16,25 +16,6 @@ const attendanceSchema = new mongoose.Schema({
     ref: 'TimeEntry',
     required: [true, 'Time entry ID is required']
   },
-  lessonDate: {
-    type: Date,
-    required: [true, 'Lesson date is required'],
-    validate: {
-      validator: function(value) {
-        // Allow dates up to 1 day in the future for scheduling
-        const tomorrow = new Date();
-        tomorrow.setDate(tomorrow.getDate() + 1);
-        return value <= tomorrow;
-      },
-      message: 'Lesson date cannot be more than 1 day in the future'
-    }
-  },
-  lessonType: {
-    type: String,
-    required: [true, 'Lesson type is required'],
-    trim: true,
-    maxlength: [100, 'Lesson type cannot exceed 100 characters']
-  },
   status: {
     type: String,
     enum: ['present', 'absent', 'late', 'makeup', 'cancelled'],
@@ -57,75 +38,19 @@ const attendanceSchema = new mongoose.Schema({
     trim: true,
     maxlength: [1000, 'Notes cannot exceed 1000 characters']
   },
-  makeupScheduled: {
-    type: Date,
-    validate: {
-      validator: function(value) {
-        // Makeup date should be in the future
-        if (!value) return true; // Optional field
-        return value > new Date();
-      },
-      message: 'Makeup date must be in the future'
-    }
-  },
-  makeupCompleted: {
-    type: Boolean,
-    default: false
-  },
-  makeupCompletedAt: {
-    type: Date,
-    required: function() {
-      return this.makeupCompleted;
-    }
-  },
-  lateMinutes: {
-    type: Number,
-    min: [0, 'Late minutes must be positive'],
-    max: [120, 'Late minutes cannot exceed 2 hours'],
-    required: function() {
-      return this.status === 'late';
-    }
-  },
-  homework: {
-    assigned: {
-      type: String,
-      trim: true,
-      maxlength: [500, 'Homework assignment cannot exceed 500 characters']
-    },
-    completed: {
-      type: Boolean,
-      default: false
-    },
-    completionNotes: {
-      type: String,
-      trim: true,
-      maxlength: [300, 'Completion notes cannot exceed 300 characters']
-    }
-  },
-  parentNotified: {
-    type: Boolean,
-    default: false
-  },
-  parentNotifiedAt: {
-    type: Date,
-    required: function() {
-      return this.parentNotified;
-    }
-  }
 }, {
   timestamps: true
 });
 
 // Indexes for performance
-attendanceSchema.index({ studentId: 1, lessonDate: -1 });
-attendanceSchema.index({ teacherId: 1, lessonDate: -1 });
+attendanceSchema.index({ studentId: 1 });
+attendanceSchema.index({ teacherId: 1 });
 attendanceSchema.index({ timeEntryId: 1 });
-attendanceSchema.index({ lessonDate: 1 });
 attendanceSchema.index({ status: 1 });
 
 // Compound indexes for common queries
-attendanceSchema.index({ teacherId: 1, status: 1, lessonDate: -1 });
-attendanceSchema.index({ studentId: 1, status: 1, lessonDate: -1 });
+attendanceSchema.index({ teacherId: 1, status: 1 });
+attendanceSchema.index({ studentId: 1, status: 1 });
 
 // Virtual for attendance rate calculation
 attendanceSchema.virtual('isPresent').get(function() {

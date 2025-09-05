@@ -51,9 +51,9 @@ const getAttendanceRecords = async (req, res) => {
     sortOptions[sortBy] = sortOrder;
 
     const attendanceRecords = await Attendance.find(query)
-      .populate('studentId', 'personalInfo.firstName personalInfo.lastName personalInfo.email')
+      .populate('studentId', 'firstName lastName primaryPhone')
       .populate('teacherId', 'profile.firstName profile.lastName email')
-      .populate('timeEntryId', 'lessonTypeId hoursWorked totalAmount')
+      .populate('timeEntryId', 'hoursWorked totalAmount')
       .sort(sortOptions)
       .skip(skip)
       .limit(limit);
@@ -86,9 +86,9 @@ const getAttendanceRecords = async (req, res) => {
 const getAttendanceRecord = async (req, res) => {
   try {
     const attendance = await Attendance.findById(req.params.id)
-      .populate('studentId', 'personalInfo.firstName personalInfo.lastName personalInfo.email parentInfo')
+      .populate('studentId', 'firstName lastName primaryPhone secondaryContact')
       .populate('teacherId', 'profile.firstName profile.lastName email')
-      .populate('timeEntryId', 'lessonTypeId hoursWorked totalAmount date');
+      .populate('timeEntryId', 'hoursWorked totalAmount date');
 
     if (!attendance) {
       return res.status(404).json({
@@ -535,6 +535,180 @@ const getPendingMakeups = async (req, res) => {
   }
 };
 
+// Get attendance records by class
+const getClassAttendance = async (req, res) => {
+  try {
+    const { classId } = req.params;
+    const { startDate, endDate, status, studentId } = req.query;
+
+    // Verify the class exists and user has access
+    const Class = require('../models/Class');
+    const classItem = await Class.findById(classId);
+    
+    if (!classItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Class not found.'
+      });
+    }
+
+    // Check access permissions
+    if (req.user.role !== 'admin' && classItem.teacherId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view attendance for your own classes.'
+      });
+    }
+
+    // Get students assigned to this class
+    const students = await Student.find({ 'assignedClasses.classId': classId })
+      .select('_id')
+      .lean();
+
+    const studentIds = students.map(s => s._id);
+
+    // Build query
+    let query = {
+      studentId: { $in: studentIds },
+      teacherId: classItem.teacherId
+    };
+
+    // Add student filtering if provided
+    if (studentId) {
+      query.studentId = studentId;
+    }
+
+    // Add status filtering if provided
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+
+    // Add date filtering if provided
+    if (startDate || endDate) {
+      query.lessonDate = {};
+      if (startDate) {
+        query.lessonDate.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        query.lessonDate.$lte = new Date(endDate);
+      }
+    }
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    const sortBy = req.query.sortBy || 'lessonDate';
+    const sortOrder = req.query.sortOrder === 'asc' ? 1 : -1;
+    const sortOptions = {};
+    sortOptions[sortBy] = sortOrder;
+
+    // Get attendance records
+    const attendanceRecords = await Attendance.find(query)
+      .populate('studentId', 'firstName lastName email level')
+      .populate('teacherId', 'profile.firstName profile.lastName email')
+      .populate('timeEntryId', 'lessonTypeId hoursWorked totalAmount date')
+      .sort(sortOptions)
+      .skip(skip)
+      .limit(limit);
+
+    const totalCount = await Attendance.countDocuments(query);
+
+    // Calculate statistics
+    const allRecords = await Attendance.find(query).lean();
+    const statistics = {
+      totalSessions: allRecords.length,
+      presentSessions: allRecords.filter(a => a.status === 'present').length,
+      absentSessions: allRecords.filter(a => a.status === 'absent').length,
+      lateSessions: allRecords.filter(a => a.status === 'late').length,
+      makeupSessions: allRecords.filter(a => a.status === 'makeup').length,
+      cancelledSessions: allRecords.filter(a => a.status === 'cancelled').length
+    };
+
+    statistics.attendanceRate = statistics.totalSessions > 0 
+      ? Math.round(((statistics.presentSessions + statistics.lateSessions) / statistics.totalSessions * 100) * 100) / 100
+      : 0;
+
+    res.json({
+      success: true,
+      data: {
+        records: attendanceRecords,
+        statistics,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalCount / limit),
+          totalRecords: totalCount,
+          recordsPerPage: limit
+        },
+        filters: {
+          classId,
+          studentId: studentId || null,
+          status: status || 'all',
+          startDate: startDate || null,
+          endDate: endDate || null
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get class attendance error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch class attendance records.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
+// Get attendance records by time entry ID
+const getAttendanceByTimeEntry = async (req, res) => {
+  try {
+    const { timeEntryId } = req.params;
+
+    if (!timeEntryId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Time entry ID is required.'
+      });
+    }
+
+    // First check if the time entry exists and user has access
+    const timeEntry = await TimeEntry.findById(timeEntryId);
+    if (!timeEntry) {
+      return res.status(404).json({
+        success: false,
+        message: 'Time entry not found.'
+      });
+    }
+
+    // Check if user can access this time entry
+    if (req.user.role !== 'admin' && timeEntry.teacherId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view attendance for your own time entries.'
+      });
+    }
+
+    const attendanceRecords = await Attendance.find({ timeEntryId })
+      .populate('studentId', 'firstName lastName primaryPhone')
+      .populate('teacherId', 'profile.firstName profile.lastName email')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      success: true,
+      data: {
+        attendance: attendanceRecords
+      }
+    });
+  } catch (error) {
+    console.error('Get attendance by time entry error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch attendance records.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 module.exports = {
   getAttendanceRecords,
   getAttendanceRecord,
@@ -544,5 +718,7 @@ module.exports = {
   getStudentAttendanceStats,
   getTeacherAttendanceOverview,
   getAttendancePatterns,
-  getPendingMakeups
+  getPendingMakeups,
+  getClassAttendance,
+  getAttendanceByTimeEntry
 };

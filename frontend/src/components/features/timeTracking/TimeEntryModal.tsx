@@ -5,6 +5,7 @@ import type { Class } from '../../../types/class';
 import type { Student } from '../../../types/student';
 import AttendanceTracker from './AttendanceTracker';
 import { classService } from '../../../services/classService';
+import { attendanceService } from '../../../services/attendanceService';
 
 interface TimeEntryModalData {
   _id?: string;
@@ -45,7 +46,9 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [students, setStudents] = useState<Student[]>([]);
   const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [initialAttendance, setInitialAttendance] = useState<AttendanceRecord[]>([]);
   const [loadingStudents, setLoadingStudents] = useState(false);
+  const [loadingAttendance, setLoadingAttendance] = useState(false);
 
   useEffect(() => {
     if (editingEntry) {
@@ -60,30 +63,56 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
     }
     setErrors({});
     setStudents([]);
+    setAttendance([]);
+    setInitialAttendance([]);
   }, [editingEntry, isOpen]);
 
   // Load students when class is selected
   useEffect(() => {
     const loadStudents = async () => {
-      if (!formData.classId || editingEntry) {
+      if (!formData.classId) {
         setStudents([]);
+        setInitialAttendance([]);
         return;
       }
 
       setLoadingStudents(true);
       try {
+        // Load students for the class
         const classStudents = await classService.getClassStudents(formData.classId);
         setStudents(classStudents);
+
+        // If editing, load existing attendance records
+        if (editingEntry?._id) {
+          setLoadingAttendance(true);
+          try {
+            const existingAttendance = await attendanceService.getAttendanceByTimeEntry(editingEntry._id);
+            // Convert to the format expected by AttendanceTracker
+            const attendanceRecords = existingAttendance.map(record => ({
+              studentId: record.studentId,
+              status: record.status === 'present' ? 'present' : 'absent' as 'present' | 'absent'
+            }));
+            setInitialAttendance(attendanceRecords);
+          } catch (error) {
+            console.error('Failed to load existing attendance:', error);
+            setInitialAttendance([]);
+          } finally {
+            setLoadingAttendance(false);
+          }
+        } else {
+          setInitialAttendance([]);
+        }
       } catch (error) {
         console.error('Failed to load class students:', error);
         setStudents([]);
+        setInitialAttendance([]);
       } finally {
         setLoadingStudents(false);
       }
     };
 
     loadStudents();
-  }, [formData.classId, editingEntry]);
+  }, [formData.classId, editingEntry?._id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -135,13 +164,17 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
       return;
     }
 
-    // For editing entries, don't include attendance
     if (editingEntry) {
+      // For editing entries, include attendance if students are present
       await onSubmit({
         id: editingEntry._id!,
         hoursWorked: formData.hoursWorked,
         description: formData.description,
-        classId: formData.classId || undefined
+        classId: formData.classId || undefined,
+        attendance: attendance.length > 0 ? attendance.map(record => ({
+          studentId: record.studentId,
+          status: record.status as 'present' | 'absent' | 'late' | 'makeup' | 'cancelled'
+        })) : undefined
       } as UpdateTimeEntryData);
     } else {
       // For new entries, include attendance if students are present
@@ -270,22 +303,13 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
               <div className="space-y-4">
                 <h4 className="text-sm font-medium text-gray-900 border-b pb-2">Attendance Tracking</h4>
                 
-                {!editingEntry && (
-                  <AttendanceTracker
-                    classId={formData.classId}
-                    students={students}
-                    onAttendanceChange={setAttendance}
-                    isLoading={loadingStudents}
-                  />
-                )}
-                
-                {editingEntry && (
-                  <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                    <div className="flex items-center text-gray-500">
-                      <span>Attendance tracking is only available when creating new time entries</span>
-                    </div>
-                  </div>
-                )}
+                <AttendanceTracker
+                  classId={formData.classId}
+                  students={students}
+                  onAttendanceChange={setAttendance}
+                  initialAttendance={initialAttendance}
+                  isLoading={loadingStudents || loadingAttendance}
+                />
               </div>
             </div>
           </div>

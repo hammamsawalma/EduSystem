@@ -33,6 +33,9 @@ router.post('/assign-students', authorize('admin'), auditLoggers.classAssignStud
 // Get students assigned to a class
 router.get('/:id/students', classController.getClassStudents);
 
+// Get students assigned to a class with attendance information
+router.get('/:id/students/attendance', classController.getClassStudentsAttendance);
+
 // Remove student from class (admin only)
 router.delete('/:classId/students/:studentId', authorize('admin'), auditLoggers.classRemoveStudent, classController.removeStudentFromClass);
 

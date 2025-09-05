@@ -13,6 +13,7 @@ import type { Class } from '../../types/class';
 import type { Teacher } from '../../types/teacher';
 import ClassStudentAssignment from '../../components/features/classes/ClassStudentAssignment';
 import ClassStudentsView from '../../components/features/classes/ClassStudentsView';
+import ClassStudentsAttendance from '../../components/features/classes/ClassStudentsAttendance';
 import { 
   Plus, 
   Edit, 
@@ -21,7 +22,8 @@ import {
   AlertCircle,
   X,
   Users,
-  UserPlus
+  UserPlus,
+  Calendar
 } from 'lucide-react';
 
 interface ClassFormData {
@@ -50,6 +52,7 @@ const ClassesPage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [showStudentsModal, setShowStudentsModal] = useState(false);
+  const [showAttendanceModal, setShowAttendanceModal] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
 
   // Form state
@@ -245,6 +248,11 @@ const ClassesPage: React.FC = () => {
   const openStudentsModal = (classItem: Class) => {
     setSelectedClass(classItem);
     setShowStudentsModal(true);
+  };
+
+  const openAttendanceModal = (classItem: Class) => {
+    setSelectedClass(classItem);
+    setShowAttendanceModal(true);
   };
 
   const handleFormChange = (field: keyof ClassFormData, value: string | number | boolean) => {
@@ -461,6 +469,14 @@ const ClassesPage: React.FC = () => {
                         >
                           <Users className="w-3 h-3 mr-1" />
                           Students
+                        </button>
+                        <button
+                          onClick={() => openAttendanceModal(classItem)}
+                          className="btn btn-secondary btn-sm flex items-center"
+                          title="View attendance"
+                        >
+                          <Calendar className="w-3 h-3 mr-1" />
+                          Attendance
                         </button>
                         {user?.role === 'admin' && (
                           <button
@@ -754,6 +770,40 @@ const ClassesPage: React.FC = () => {
           }}
           onStudentRemoved={handleAssignmentSuccess}
         />
+      )}
+
+      {/* Attendance Modal */}
+      {showAttendanceModal && selectedClass && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={() => {
+              setShowAttendanceModal(false);
+              setSelectedClass(null);
+            }}></div>
+
+            <div className="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle w-full max-w-7xl">
+              <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Class Attendance - {selectedClass.name}
+                  </h3>
+                  <button
+                    onClick={() => {
+                      setShowAttendanceModal(false);
+                      setSelectedClass(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="h-6 w-6" />
+                  </button>
+                </div>
+                <div className="max-h-[80vh] overflow-y-auto">
+                  <ClassStudentsAttendance classId={selectedClass._id} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

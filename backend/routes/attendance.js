@@ -23,6 +23,12 @@ router.get('/pending-makeups', attendanceController.getPendingMakeups);
 // GET /api/attendance/student/:studentId/stats - Get student attendance statistics
 router.get('/student/:studentId/stats', attendanceController.getStudentAttendanceStats);
 
+// GET /api/attendance/class/:classId - Get attendance records by class
+router.get('/class/:classId', attendanceController.getClassAttendance);
+
+// GET /api/attendance/time-entry/:timeEntryId - Get attendance records by time entry
+router.get('/time-entry/:timeEntryId', attendanceController.getAttendanceByTimeEntry);
+
 // GET /api/attendance/:id - Get single attendance record
 router.get('/:id', attendanceController.getAttendanceRecord);
 

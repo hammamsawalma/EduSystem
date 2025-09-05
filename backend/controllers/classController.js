@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const Class = require('../models/Class');
 const Student = require('../models/Student');
+const Attendance = require('../models/Attendance');
 const { logAuditEntry } = require('../middleware/audit');
 
 // Get all classes for a teacher
@@ -429,6 +430,146 @@ const getClassStudents = async (req, res) => {
   }
 };
 
+// Get class students with their attendance information
+const getClassStudentsAttendance = async (req, res) => {
+  try {
+    const classId = req.params.id;
+    const { startDate, endDate, status } = req.query;
+
+    // Find the class
+    const classItem = await Class.findById(classId);
+    if (!classItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Class not found.'
+      });
+    }
+
+    // Only admin or the teacher who owns the class can view
+    if (req.user.role !== 'admin' && classItem.teacherId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view attendance for your own classes.'
+      });
+    }
+
+    // Get students assigned to this class
+    const students = await Student.find({ 'assignedClasses.classId': classId })
+      .populate('teacherId', 'profile.firstName profile.lastName email')
+      .sort({ firstName: 1, lastName: 1 })
+      .lean();
+
+    // Build date filter for attendance
+    const dateFilter = {};
+    if (startDate) {
+      dateFilter.$gte = new Date(startDate);
+    }
+    if (endDate) {
+      dateFilter.$lte = new Date(endDate);
+    }
+
+    // Build attendance query
+    const attendanceQuery = {
+      studentId: { $in: students.map(s => s._id) },
+      teacherId: classItem.teacherId
+    };
+
+    if (Object.keys(dateFilter).length > 0) {
+      attendanceQuery.lessonDate = dateFilter;
+    }
+
+    if (status && status !== 'all') {
+      attendanceQuery.status = status;
+    }
+
+    // Get attendance records for all students in the class
+    const attendanceRecords = await Attendance.find(attendanceQuery)
+      .populate('timeEntryId', 'lessonTypeId hoursWorked totalAmount date')
+      .sort({ lessonDate: -1 })
+      .lean();
+
+    // Group attendance by student
+    const attendanceByStudent = {};
+    attendanceRecords.forEach(record => {
+      const studentId = record.studentId.toString();
+      if (!attendanceByStudent[studentId]) {
+        attendanceByStudent[studentId] = [];
+      }
+      attendanceByStudent[studentId].push(record);
+    });
+
+    // Calculate attendance statistics for each student
+    const studentsWithAttendance = students.map(student => {
+      const studentId = student._id.toString();
+      const studentAttendance = attendanceByStudent[studentId] || [];
+      
+      // Calculate statistics
+      const totalSessions = studentAttendance.length;
+      const presentSessions = studentAttendance.filter(a => a.status === 'present').length;
+      const absentSessions = studentAttendance.filter(a => a.status === 'absent').length;
+      const lateSessions = studentAttendance.filter(a => a.status === 'late').length;
+      const makeupSessions = studentAttendance.filter(a => a.status === 'makeup').length;
+      const cancelledSessions = studentAttendance.filter(a => a.status === 'cancelled').length;
+      
+      const attendanceRate = totalSessions > 0 ? ((presentSessions + lateSessions) / totalSessions * 100) : 0;
+
+      return {
+        ...student,
+        attendance: {
+          records: studentAttendance,
+          statistics: {
+            totalSessions,
+            presentSessions,
+            absentSessions,
+            lateSessions,
+            makeupSessions,
+            cancelledSessions,
+            attendanceRate: Math.round(attendanceRate * 100) / 100
+          }
+        }
+      };
+    });
+
+    // Calculate class-wide statistics
+    const classStats = {
+      totalStudents: students.length,
+      totalSessions: attendanceRecords.length,
+      averageAttendanceRate: studentsWithAttendance.length > 0 
+        ? studentsWithAttendance.reduce((sum, student) => sum + student.attendance.statistics.attendanceRate, 0) / studentsWithAttendance.length
+        : 0
+    };
+
+    res.json({
+      success: true,
+      data: {
+        class: {
+          _id: classItem._id,
+          name: classItem.name,
+          description: classItem.description,
+          teacherId: classItem.teacherId
+        },
+        students: studentsWithAttendance,
+        classStatistics: {
+          ...classStats,
+          averageAttendanceRate: Math.round(classStats.averageAttendanceRate * 100) / 100
+        },
+        filters: {
+          startDate: startDate || null,
+          endDate: endDate || null,
+          status: status || 'all'
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get class students attendance error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch class students attendance.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 // Remove student from class (admin only)
 const removeStudentFromClass = async (req, res) => {
   try {
@@ -489,5 +630,6 @@ module.exports = {
   deleteClass,
   assignStudentsToClass,
   getClassStudents,
+  getClassStudentsAttendance,
   removeStudentFromClass
 };

@@ -2,24 +2,17 @@ import api from './api';
 
 export interface AttendanceRecord {
   _id?: string;
-  studentId: string;
+  studentId: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    primaryPhone?: string;
+  } | string;
   teacherId: string;
   timeEntryId: string;
-  lessonDate: string;
-  lessonType: string;
   status: 'present' | 'absent' | 'late' | 'makeup' | 'cancelled';
   duration?: number;
   notes?: string;
-  lateMinutes?: number;
-  makeupScheduled?: string;
-  makeupCompleted?: boolean;
-  homework?: {
-    assigned?: string;
-    completed?: boolean;
-    completionNotes?: string;
-  };
-  parentNotified?: boolean;
-  parentNotifiedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -27,18 +20,9 @@ export interface AttendanceRecord {
 export interface CreateAttendanceData {
   studentId: string;
   timeEntryId: string;
-  lessonDate: string;
-  lessonType: string;
   status: 'present' | 'absent' | 'late' | 'makeup' | 'cancelled';
   duration?: number;
   notes?: string;
-  lateMinutes?: number;
-  makeupScheduled?: string;
-  homework?: {
-    assigned?: string;
-    completed?: boolean;
-    completionNotes?: string;
-  };
 }
 
 export interface UpdateAttendanceData {
@@ -46,15 +30,6 @@ export interface UpdateAttendanceData {
   status?: 'present' | 'absent' | 'late' | 'makeup' | 'cancelled';
   duration?: number;
   notes?: string;
-  lateMinutes?: number;
-  makeupScheduled?: string;
-  makeupCompleted?: boolean;
-  homework?: {
-    assigned?: string;
-    completed?: boolean;
-    completionNotes?: string;
-  };
-  parentNotified?: boolean;
 }
 
 export interface AttendanceStats {
@@ -201,6 +176,40 @@ export const attendanceService = {
 
     const response = await api.get('/attendance/pending-makeups', { params });
     return response.data.data.pendingMakeups;
+  },
+
+  // Get attendance records by class
+  getClassAttendance: async (
+    classId: string,
+    filters?: {
+      startDate?: string;
+      endDate?: string;
+      status?: string;
+      studentId?: string;
+      page?: number;
+      limit?: number;
+      sortBy?: string;
+      sortOrder?: 'asc' | 'desc';
+    }
+  ): Promise<any> => {
+    const params: any = {};
+    if (filters?.startDate) params.startDate = filters.startDate;
+    if (filters?.endDate) params.endDate = filters.endDate;
+    if (filters?.status) params.status = filters.status;
+    if (filters?.studentId) params.studentId = filters.studentId;
+    if (filters?.page) params.page = filters.page;
+    if (filters?.limit) params.limit = filters.limit;
+    if (filters?.sortBy) params.sortBy = filters.sortBy;
+    if (filters?.sortOrder) params.sortOrder = filters.sortOrder;
+
+    const response = await api.get(`/attendance/class/${classId}`, { params });
+    return response.data.data;
+  },
+
+  // Get attendance records by time entry
+  getAttendanceByTimeEntry: async (timeEntryId: string): Promise<AttendanceRecord[]> => {
+    const response = await api.get<{ success: boolean; data: { attendance: AttendanceRecord[] } }>(`/attendance/time-entry/${timeEntryId}`);
+    return response.data.data.attendance;
   }
 };
 

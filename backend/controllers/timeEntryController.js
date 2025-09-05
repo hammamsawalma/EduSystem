@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const TimeEntry = require('../models/TimeEntry');
 const Class = require('../models/Class');
+const Attendance = require('../models/Attendance');
 const { logAuditEntry } = require('../middleware/audit');
 
 // Get all time entries for a teacher
@@ -117,7 +118,8 @@ const createTimeEntry = async (req, res) => {
       date,
       hoursWorked,
       description,
-      classId
+      classId,
+      attendance
     } = req.body;
 
     // Validate required fields
@@ -183,6 +185,39 @@ const createTimeEntry = async (req, res) => {
     });
 
     await timeEntry.save();
+
+    // Create attendance records if provided
+    if (attendance && Array.isArray(attendance) && attendance.length > 0) {
+      const attendanceRecords = [];
+      
+      for (const record of attendance) {
+        if (!record.studentId || !record.status) {
+          continue; // Skip invalid records
+        }
+        
+        try {
+          const attendanceRecord = new Attendance({
+            studentId: record.studentId,
+            teacherId: req.user._id,
+            classId: classId,
+            date: entryDate,
+            status: record.status,
+            timeEntryId: timeEntry._id,
+            lessonType: description?.trim() || 'Regular lesson',
+            duration: record.status === 'present' ? Math.round(Number(hoursWorked) * 60) : undefined, // Convert to minutes
+            notes: record.notes?.trim()
+          });
+          
+          await attendanceRecord.save();
+          attendanceRecords.push(attendanceRecord);
+        } catch (attendanceError) {
+          console.error('Error creating attendance record:', attendanceError);
+          // Continue with other records even if one fails
+        }
+      }
+      
+      console.log(`Created ${attendanceRecords.length} attendance records for time entry ${timeEntry._id}`);
+    }
 
     // Populate for response
     await timeEntry.populate([
@@ -336,6 +371,30 @@ const updateTimeEntry = async (req, res) => {
     }
 
     await timeEntry.save();
+
+    // Handle attendance updates if provided
+    if (req.body.attendance && Array.isArray(req.body.attendance)) {
+      try {
+        // Delete existing attendance records for this time entry
+        await Attendance.deleteMany({ timeEntryId: timeEntry._id });
+
+        // Create new attendance records
+        const attendanceRecords = req.body.attendance.map(record => ({
+          studentId: record.studentId,
+          teacherId: req.user._id,
+          timeEntryId: timeEntry._id,
+          status: record.status,
+          notes: record.notes || ''
+        }));
+
+        if (attendanceRecords.length > 0) {
+          await Attendance.insertMany(attendanceRecords);
+        }
+      } catch (attendanceError) {
+        console.error('Attendance update error:', attendanceError);
+        // Continue with the response even if attendance fails
+      }
+    }
 
     // Populate for response
     await timeEntry.populate([
