@@ -36,6 +36,9 @@ router.get('/:id/students', classController.getClassStudents);
 // Get students assigned to a class with attendance information
 router.get('/:id/students/attendance', classController.getClassStudentsAttendance);
 
+// Get attendance records for a specific class
+router.get('/:id/attendance', classController.getClassAttendance);
+
 // Remove student from class (admin only)
 router.delete('/:classId/students/:studentId', authorize('admin'), auditLoggers.classRemoveStudent, classController.removeStudentFromClass);
 

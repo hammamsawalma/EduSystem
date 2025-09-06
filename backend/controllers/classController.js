@@ -3,6 +3,7 @@ const Class = require('../models/Class');
 const Student = require('../models/Student');
 const Attendance = require('../models/Attendance');
 const { logAuditEntry } = require('../middleware/audit');
+const TimeEntry = require('../models/TimeEntry');
 
 // Get all classes for a teacher
 const getClasses = async (req, res) => {
@@ -459,24 +460,28 @@ const getClassStudentsAttendance = async (req, res) => {
       .sort({ firstName: 1, lastName: 1 })
       .lean();
 
-    // Build date filter for attendance
-    const dateFilter = {};
-    if (startDate) {
-      dateFilter.$gte = new Date(startDate);
-    }
-    if (endDate) {
-      dateFilter.$lte = new Date(endDate);
-    }
+    // Build attendance query - first find all time entries for this class within date range
+    let timeEntryQuery = { classId: classId };
+    // if (startDate || endDate) {
+    //   timeEntryQuery.date = {};
+    //   if (startDate) {
+    //     timeEntryQuery.date.$gte = new Date(startDate);
+    //   }
+    //   if (endDate) {
+    //     timeEntryQuery.date.$lte = new Date(endDate);
+    //   }
+    // }
+
+    // Get time entries for this class
+    const timeEntries = await TimeEntry.find(timeEntryQuery).select('_id date classId');
+    const timeEntryIds = timeEntries.filter(te => te.classId.toString() === classId).map(te => te._id);
 
     // Build attendance query
     const attendanceQuery = {
       studentId: { $in: students.map(s => s._id) },
-      teacherId: classItem.teacherId
+      teacherId: classItem.teacherId,
+      timeEntryId: { $in: timeEntryIds }
     };
-
-    if (Object.keys(dateFilter).length > 0) {
-      attendanceQuery.lessonDate = dateFilter;
-    }
 
     if (status && status !== 'all') {
       attendanceQuery.status = status;
@@ -484,14 +489,17 @@ const getClassStudentsAttendance = async (req, res) => {
 
     // Get attendance records for all students in the class
     const attendanceRecords = await Attendance.find(attendanceQuery)
-      .populate('timeEntryId', 'lessonTypeId hoursWorked totalAmount date')
-      .sort({ lessonDate: -1 })
+      .populate('timeEntryId', 'hoursWorked totalAmount date classId')
+      .populate('studentId', 'firstName lastName primaryPhone')
+      .sort({ createdAt: -1 })
       .lean();
+    
+      console.log('Attendance Records:', attendanceRecords);
 
     // Group attendance by student
     const attendanceByStudent = {};
     attendanceRecords.forEach(record => {
-      const studentId = record.studentId.toString();
+      const studentId = record.studentId._id.toString();
       if (!attendanceByStudent[studentId]) {
         attendanceByStudent[studentId] = [];
       }
@@ -570,6 +578,108 @@ const getClassStudentsAttendance = async (req, res) => {
   }
 };
 
+// Get attendance records for a specific class
+const getClassAttendance = async (req, res) => {
+  try {
+    const classId = req.params.id;
+    const { startDate, endDate, status, page = 1, limit = 50 } = req.query;
+
+    // Find the class
+    const classItem = await Class.findById(classId);
+    if (!classItem) {
+      return res.status(404).json({
+        success: false,
+        message: 'Class not found.'
+      });
+    }
+
+    // Only admin or the teacher who owns the class can view
+    if (req.user.role !== 'admin' && classItem.teacherId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only view attendance for your own classes.'
+      });
+    }
+
+    // Build time entry query first
+    let timeEntryQuery = { classId: classId };
+    if (startDate || endDate) {
+      timeEntryQuery.date = {};
+      if (startDate) {
+        timeEntryQuery.date.$gte = new Date(startDate);
+      }
+      if (endDate) {
+        timeEntryQuery.date.$lte = new Date(endDate);
+      }
+    }
+
+    // Get time entries for this class
+    const TimeEntry = require('../models/TimeEntry');
+    const timeEntries = await TimeEntry.find(timeEntryQuery).select('_id date');
+    const timeEntryIds = timeEntries.map(te => te._id);
+
+    if (timeEntryIds.length === 0) {
+      return res.json({
+        success: true,
+        data: {
+          attendance: [],
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: 0,
+            pages: 0
+          }
+        }
+      });
+    }
+
+    // Build attendance query
+    const attendanceQuery = {
+      timeEntryId: { $in: timeEntryIds }
+    };
+
+    if (status && status !== 'all') {
+      attendanceQuery.status = status;
+    }
+
+    // Pagination
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Get attendance records
+    const attendanceRecords = await Attendance.find(attendanceQuery)
+      .populate('studentId', 'firstName lastName primaryPhone')
+      .populate('teacherId', 'profile.firstName profile.lastName email')
+      .populate('timeEntryId', 'hoursWorked totalAmount date classId')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
+      .lean();
+
+    // Get total count for pagination
+    const total = await Attendance.countDocuments(attendanceQuery);
+
+    res.json({
+      success: true,
+      data: {
+        attendance: attendanceRecords,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total,
+          pages: Math.ceil(total / parseInt(limit))
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Get class attendance error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch class attendance.',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+};
+
 // Remove student from class (admin only)
 const removeStudentFromClass = async (req, res) => {
   try {
@@ -631,5 +741,6 @@ module.exports = {
   assignStudentsToClass,
   getClassStudents,
   getClassStudentsAttendance,
+  getClassAttendance,
   removeStudentFromClass
 };

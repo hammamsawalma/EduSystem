@@ -162,7 +162,7 @@ const getTeacherAccounting = async (req, res) => {
           .reduce((sum, p) => sum + p.amount, 0);
         
         const totalPending = teacherPayments
-          .filter(p => ['pending', 'approved'].includes(p.status))
+          .filter(p => ['pending'].includes(p.status))
           .reduce((sum, p) => sum + p.amount, 0);
         
         // Calculate unpaid earnings (what they earned but haven't been paid)

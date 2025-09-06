@@ -92,7 +92,7 @@ const TimeEntryModal: React.FC<TimeEntryModalProps> = ({
               studentId: record.studentId,
               status: record.status === 'present' ? 'present' : 'absent' as 'present' | 'absent'
             }));
-            setInitialAttendance(attendanceRecords);
+            setInitialAttendance(attendanceRecords as any);
           } catch (error) {
             console.error('Failed to load existing attendance:', error);
             setInitialAttendance([]);

@@ -166,7 +166,7 @@ const TimeTracking: React.FC = () => {
     }
   };
 
-  const handleUpdateEntry = async (data: UpdateTimeEntryData, attendance?: AttendanceRecord[]) => {
+  const handleUpdateEntry = async (data: UpdateTimeEntryData) => {
     try {
       await dispatch(updateTimeEntry(data)).unwrap();
       setIsModalOpen(false);
@@ -193,7 +193,7 @@ const TimeTracking: React.FC = () => {
     attendance?: AttendanceRecord[]
   ) => {
     if (editingEntry) {
-      await handleUpdateEntry(data as UpdateTimeEntryData, attendance);
+      await handleUpdateEntry(data as UpdateTimeEntryData);
     } else {
       await handleCreateEntry(data as CreateTimeEntryData, attendance);
     }
