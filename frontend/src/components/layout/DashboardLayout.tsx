@@ -14,7 +14,6 @@ import {
   BookOpen,
   TrendingUp,
   FileText,
-  Bell,
   GraduationCap,
   Calculator
 } from 'lucide-react';
@@ -172,14 +171,6 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
             </div>
             
             <div className="flex items-center space-x-4">
-              {/* Notifications */}
-              <button className="p-2 rounded-md hover:bg-gray-100 relative">
-                <Bell className="w-5 h-5 text-gray-600" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-error-500 rounded-full text-xs text-white flex items-center justify-center">
-                  3
-                </span>
-              </button>
-              
               {/* User menu */}
               <div className="flex items-center space-x-2">
                 <div className="w-8 h-8 bg-primary-100 rounded-full flex items-center justify-center">
