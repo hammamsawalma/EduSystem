@@ -1,6 +1,19 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const { validationResult } = require('express-validator');
+const crypto = require('crypto');
+const NotificationService = require('../utils/notificationService');
+
+// Initialize notification service
+const notificationService = new NotificationService();
+
+/**
+ * Generate a secure random password
+ * @returns {String} Random password
+ */
+const generateRandomPassword = () => {
+  return crypto.randomBytes(8).toString('hex').substring(0, 12);
+};
 
 /**
  * Get all users (with optional role filter)
@@ -370,13 +383,50 @@ exports.updateUserStatus = async (req, res) => {
         message: 'User not found'
       });
     }
+
+    // Check if this is a teacher approval (from pending to approved)
+    const isTeacherApproval = user.role === 'teacher' && 
+                              user.status === 'pending' && 
+                              backendStatus === 'approved';
+
+    let newPassword = null;
     
-    // Update status
-    user = await User.findByIdAndUpdate(
-      req.params.id,
-      { $set: { status: backendStatus } },
-      { new: true }
-    ).select('-password');
+    // Generate new password for teacher approval
+    if (isTeacherApproval) {
+      newPassword = generateRandomPassword();
+      const saltRounds = 10;
+      const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
+      
+      // Update user with new password and status
+      user = await User.findByIdAndUpdate(
+        req.params.id,
+        { 
+          $set: { 
+            status: backendStatus,
+            password: hashedPassword
+          } 
+        },
+        { new: true }
+      ).select('-password');
+    } else {
+      // Update status only
+      user = await User.findByIdAndUpdate(
+        req.params.id,
+        { $set: { status: backendStatus } },
+        { new: true }
+      ).select('-password');
+    }
+    
+    // Send approval email with password for teachers
+    if (isTeacherApproval && newPassword) {
+      try {
+        await notificationService.sendTeacherApprovalEmail(user, newPassword);
+        console.log(`Teacher approval email sent to ${user.email}`);
+      } catch (emailError) {
+        console.error('Failed to send teacher approval email:', emailError);
+        // Continue execution even if email fails
+      }
+    }
     
     // Transform the response to match frontend expectations
     const transformedResponse = {
@@ -391,7 +441,10 @@ exports.updateUserStatus = async (req, res) => {
     
     return res.status(200).json({
       success: true,
-      data: transformedResponse
+      data: transformedResponse,
+      message: isTeacherApproval ? 
+        'Teacher approved successfully. Email with new password has been sent.' : 
+        'User status updated successfully'
     });
   } catch (error) {
     console.error('Update user status error:', error);

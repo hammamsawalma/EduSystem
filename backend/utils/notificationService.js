@@ -21,7 +21,7 @@ class NotificationService {
    * Initialize email transporter
    */
   initializeTransporter() {
-    this.transporter = nodemailer.createTransporter({
+    this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.gmail.com',
       port: process.env.SMTP_PORT || 587,
       secure: false,
@@ -129,6 +129,41 @@ class NotificationService {
         <div style="text-align: center; margin: 30px 0;">
           <a href="${process.env.CLIENT_URL}/login" style="background-color: #27ae60; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Login Now</a>
         </div>
+        <p>If you have any questions, please don't hesitate to contact us.</p>
+        <p>Best regards,<br>Education Management System Team</p>
+      </div>
+    `;
+
+    return await this.sendEmail({
+      to: user.email,
+      subject,
+      html
+    });
+  }
+
+  /**
+   * Send teacher approval notification with new password
+   * @param {Object} user - User object
+   * @param {String} newPassword - New temporary password
+   */
+  async sendTeacherApprovalEmail(user, newPassword) {
+    const subject = 'Account Approved - Education Management System';
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #27ae60;">Account Approved!</h2>
+        <p>Dear ${user.profile.firstName} ${user.profile.lastName},</p>
+        <p>Great news! Your teacher account has been approved and is now active.</p>
+        <p>For security purposes, we've generated a new password for your account:</p>
+        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 5px; margin: 20px 0;">
+          <p><strong>Email:</strong> ${user.email}</p>
+          <p><strong>New Password:</strong> ${newPassword}</p>
+          <p><strong>Login URL:</strong> <a href="${process.env.CLIENT_URL}/login">${process.env.CLIENT_URL}/login</a></p>
+        </div>
+        <p style="color: #e74c3c;"><strong>Important:</strong> Please change your password after your first login for security.</p>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${process.env.CLIENT_URL}/login" style="background-color: #27ae60; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block;">Login Now</a>
+        </div>
+        <p>You now have access to the teacher dashboard where you can manage your classes, track student attendance, and monitor your earnings.</p>
         <p>If you have any questions, please don't hesitate to contact us.</p>
         <p>Best regards,<br>Education Management System Team</p>
       </div>
@@ -410,4 +445,4 @@ class NotificationService {
   }
 }
 
-module.exports = new NotificationService();
+module.exports = NotificationService;
